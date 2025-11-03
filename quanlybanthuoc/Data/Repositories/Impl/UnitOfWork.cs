@@ -1,19 +1,23 @@
 ﻿
 using Microsoft.EntityFrameworkCore.Storage;
+using System.Threading.Tasks;
 
 namespace quanlybanthuoc.Data.Repositories.Impl
 {
-    public class UnitOfWork : IUnitOfWork
+    public class UnitOfWork : IUnitOfWork, IDisposable
     {
         private readonly ShopDbContext _context;
         private IDbContextTransaction? _transaction;
         private NguoiDungRepository? _nguoiDungRepository;
+        private RefreshTokenRepository? _refreshTokenRepository;
 
         public UnitOfWork(ShopDbContext context)
         {
             _context = context;
         }
 
+        public IRefreshTokenRepository RefreshTokenRepository => 
+            _refreshTokenRepository ??= new RefreshTokenRepository(_context);
         public INguoiDungRepository NguoiDungRepository =>
             _nguoiDungRepository ??= new NguoiDungRepository(_context);
 
@@ -27,8 +31,13 @@ namespace quanlybanthuoc.Data.Repositories.Impl
             if (_transaction != null)
             {
                 await _transaction.CommitAsync();
-                await _transaction.DisposeAsync();
+                Dispose();
             }
+        }
+
+        public void Dispose()
+        {
+            _transaction?.DisposeAsync();
         }
 
         public async Task RollbackTransactionAsync()
@@ -36,7 +45,7 @@ namespace quanlybanthuoc.Data.Repositories.Impl
             if (_transaction != null)
             {
                 await _transaction.RollbackAsync();
-                await _transaction.DisposeAsync();
+                Dispose();
             }
         }
 

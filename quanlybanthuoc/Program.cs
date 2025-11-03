@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Serilog;
 using quanlybanthuoc.Data;
 using quanlybanthuoc.Data.Repositories;
 using quanlybanthuoc.Data.Repositories.Impl;
@@ -6,31 +7,78 @@ using quanlybanthuoc.Mappings;
 using quanlybanthuoc.Middleware.Exceptions;
 using quanlybanthuoc.Services;
 using quanlybanthuoc.Services.Impl;
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// ============================================
+// 1️⃣ Configure Serilog (read from appsettings.json)
+// ============================================
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration) // read Serilog section from appsettings.json
+    .Enrich.FromLogContext()
+    .CreateLogger();
+
+builder.Host.UseSerilog(); // replace default logging
+
+// ============================================
+// 2️⃣ Add services to the container
+// ============================================
 
 builder.Services.AddControllers();
-// swagger
+
+// Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// add auto mapper
+// AutoMapper
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 
-// add db context and repositories
+// DbContext and Repositories
 builder.Services.AddDbContext<ShopDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<INguoiDungRepository, NguoiDungRepository>();
 
-// add services
+// Services
 builder.Services.AddScoped<INguoiDungService, NguoiDungService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<ITokenService, TokenService>();
+
+// authentication & authorization
+var jwtSettings = builder.Configuration.GetSection("Jwt");
+var secretKey = Encoding.UTF8.GetBytes(jwtSettings["Key"]!);
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true, // validate the token expiration
+        ValidateIssuerSigningKey = true, // validate the signing key
+        ValidIssuer = jwtSettings["Issuer"],
+        ValidAudience = jwtSettings["Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(secretKey), // symmetricSecurityKey use the HMACSHA256 algorithm
+        ClockSkew = TimeSpan.Zero // eliminate default clock skew
+    };
+});
+
+builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// ============================================
+// 3️⃣ Configure HTTP request pipeline
+// ============================================
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -42,10 +90,31 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+// Custom exception middleware
 app.UseMiddleware<ExceptionMiddleware>();
 
+// Serilog request logging (logs every HTTP request)
+app.UseSerilogRequestLogging();
+
+// Authentication & Authorization
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 
-app.Run();
+// ============================================
+// 4️⃣ Run application with safe Serilog shutdown
+// ============================================
+try
+{
+    Log.Information("Starting up the application...");
+    app.Run();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application startup failed!");
+}
+finally
+{
+    Log.CloseAndFlush();
+}

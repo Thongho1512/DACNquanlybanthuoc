@@ -3,6 +3,7 @@
     public interface IUnitOfWork
     {
         INguoiDungRepository NguoiDungRepository { get; }
+        IRefreshTokenRepository RefreshTokenRepository { get; }
 
         Task<int> SaveChangesAsync();
         Task BeginTransactionAsync();

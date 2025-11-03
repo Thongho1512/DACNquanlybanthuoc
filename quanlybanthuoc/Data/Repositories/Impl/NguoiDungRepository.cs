@@ -10,9 +10,9 @@ namespace quanlybanthuoc.Data.Repositories.Impl
         {
 
         }
-        public async Task<NguoiDung?> GetByUsernameAsync(string username)
+        public async Task<NguoiDung?> GetByTenDangNhapAsync(string username)
         {
-            return await _dbSet.AsNoTracking().FirstOrDefaultAsync(nguoiDung => nguoiDung.TenDangNhap == username);
+            return await _dbSet.AsNoTracking().Include(nguoiDung => nguoiDung.IdvaiTroNavigation).FirstOrDefaultAsync(nguoiDung => nguoiDung.TenDangNhap == username);
         }
 
         public async Task<PagedResult<NguoiDung>> GetPagedListAsync(int pageNumber, int pageSize, bool active, string? searchTerm = null)

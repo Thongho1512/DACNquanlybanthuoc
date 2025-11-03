@@ -35,6 +35,13 @@ namespace quanlybanthuoc.Middleware.Exceptions
             {
                 NotFoundException notFoundEx =>
                     (StatusCodes.Status404NotFound, notFoundEx.Message),
+
+                BadRequestException badRequestEx => 
+                    (StatusCodes.Status400BadRequest, badRequestEx.Message),
+
+                UnauthorizedException unauthorizedEx =>
+                    (StatusCodes.Status401Unauthorized, unauthorizedEx.Message),
+
                 _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred")
 
             };

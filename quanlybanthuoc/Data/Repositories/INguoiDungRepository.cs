@@ -8,6 +8,6 @@ namespace quanlybanthuoc.Data.Repositories
     {
         Task<PagedResult<NguoiDung>> GetPagedListAsync(int pageNumber, int pageSize, bool active, string? searchTerm = null);
         Task SoftDelete(NguoiDung entity);
-        Task<NguoiDung?> GetByUsernameAsync(string username);
+        Task<NguoiDung?> GetByTenDangNhapAsync(string username);
     }
 }

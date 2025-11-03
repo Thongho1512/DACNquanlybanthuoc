@@ -11,6 +11,5 @@ namespace quanlybanthuoc.Services
         Task<NguoiDungDto?> getByIdAsync(int id);
         Task<PagedResult<NguoiDungDto>> GetAllAsync(int pageNumber, int pageSize, bool active, string? searchTerm = null);
         Task SoftDeleteAsync(int id);
-        Task<NguoiDung?> getByUsernameAsync(string username);
     }
 }

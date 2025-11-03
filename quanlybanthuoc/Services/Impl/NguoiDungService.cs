@@ -3,6 +3,7 @@ using quanlybanthuoc.Data.Entities;
 using quanlybanthuoc.Data.Repositories;
 using quanlybanthuoc.Dtos;
 using quanlybanthuoc.Dtos.NguoiDung;
+using quanlybanthuoc.Helpers;
 using quanlybanthuoc.Middleware.Exceptions;
 
 namespace quanlybanthuoc.Services.Impl
@@ -12,6 +13,7 @@ namespace quanlybanthuoc.Services.Impl
         private readonly ILogger<NguoiDungService> _logger;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        
 
         public NguoiDungService(IUnitOfWork unitOfWork, ILogger<NguoiDungService> logger, IMapper mapper)
         {
@@ -25,11 +27,11 @@ namespace quanlybanthuoc.Services.Impl
             var entity = _mapper.Map<NguoiDung>(dto);
             entity.NgayTao = DateOnly.FromDateTime(DateTime.Now);
             entity.TrangThai = true;
+            entity.MatKhau = PasswordHelper.HashPassword(dto.MatKhau!);
             await _unitOfWork.NguoiDungRepository.CreateAsync(entity);
             await _unitOfWork.SaveChangesAsync();
             var result = _mapper.Map<NguoiDungDto>(entity);
             return result;
-
         }
 
         public async Task<PagedResult<NguoiDungDto>> GetAllAsync(int pageNumber, int pageSize, bool active, string? searchTerm = null)
@@ -60,10 +62,6 @@ namespace quanlybanthuoc.Services.Impl
             return result;
         }
 
-        public Task<NguoiDung?> getByUsernameAsync(string username)
-        {
-            throw new NotImplementedException();
-        }
 
         public async Task SoftDeleteAsync(int id)
         {
@@ -83,5 +81,6 @@ namespace quanlybanthuoc.Services.Impl
             await _unitOfWork.NguoiDungRepository.UpdateAsync(nguoiDung);
             await _unitOfWork.SaveChangesAsync();
         }
+
     }
 }
