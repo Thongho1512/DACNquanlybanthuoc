@@ -1,5 +1,6 @@
 ﻿
 using Microsoft.EntityFrameworkCore.Storage;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
 namespace quanlybanthuoc.Data.Repositories.Impl
@@ -10,14 +11,19 @@ namespace quanlybanthuoc.Data.Repositories.Impl
         private IDbContextTransaction? _transaction;
         private NguoiDungRepository? _nguoiDungRepository;
         private RefreshTokenRepository? _refreshTokenRepository;
+        private VaiTroRepository? _vaiTroRepository;
 
         public UnitOfWork(ShopDbContext context)
         {
             _context = context;
         }
 
+        public IVaiTroRepository VaiTroRepository => 
+            _vaiTroRepository ??= new VaiTroRepository(_context);
+
         public IRefreshTokenRepository RefreshTokenRepository => 
             _refreshTokenRepository ??= new RefreshTokenRepository(_context);
+
         public INguoiDungRepository NguoiDungRepository =>
             _nguoiDungRepository ??= new NguoiDungRepository(_context);
 

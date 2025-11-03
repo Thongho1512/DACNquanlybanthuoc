@@ -28,6 +28,7 @@ namespace quanlybanthuoc.Services.Impl
             entity.NgayTao = DateOnly.FromDateTime(DateTime.Now);
             entity.TrangThai = true;
             entity.MatKhau = PasswordHelper.HashPassword(dto.MatKhau!);
+            entity.IdvaiTro = _unitOfWork.VaiTroRepository.GetByTenVaiTroAsync("USER").Id;
             await _unitOfWork.NguoiDungRepository.CreateAsync(entity);
             await _unitOfWork.SaveChangesAsync();
             var result = _mapper.Map<NguoiDungDto>(entity);

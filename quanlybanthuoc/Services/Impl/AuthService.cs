@@ -51,6 +51,22 @@ namespace quanlybanthuoc.Services.Impl
             };
         }
 
+        public async Task LogoutAsync(RefreshTokenRequest request)
+        {
+            var token = await _unitOfWork.RefreshTokenRepository.GetByTokenAsync(request.RefreshToken);
+            if(token == null)
+            {
+                throw new NotFoundException("Refresh token không hợp lệ.");
+            }
+            if(token.ConHieuLuc == true)
+            {
+                token.NgayThuHoi = DateTime.Now;
+                await _unitOfWork.SaveChangesAsync();
+                _logger.LogInformation("Thu hồi refresh token thành công.");
+            }
+            
+        }
+
         public async Task<LoginResponse> RefreshTokenAsync(RefreshTokenRequest request)
         {
             var token = await _unitOfWork.RefreshTokenRepository.GetByTokenAsync(request.RefreshToken);

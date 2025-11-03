@@ -8,6 +8,7 @@ namespace quanlybanthuoc.Controllers
 {
     [Route("api/v1/nguoidungs")]
     [ApiController]
+    [Authorize(Roles ="ADMIN")]
     public class NguoiDungsController : ControllerBase
     {
         private readonly ILogger<NguoiDungsController> _logger;
@@ -55,5 +56,7 @@ namespace quanlybanthuoc.Controllers
             var result = ApiResponse<string>.SuccessResponse("NguoiDung deleted successfully");
             return Ok(result);
         }
+
+
     }
 }

@@ -6,6 +6,6 @@ namespace quanlybanthuoc.Services
     {
         Task<LoginResponse> LoginAsync(LoginRequest request);
         Task<LoginResponse> RefreshTokenAsync(RefreshTokenRequest request);
-        
+        Task LogoutAsync(RefreshTokenRequest request);
     }
 }

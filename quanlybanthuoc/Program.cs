@@ -102,9 +102,17 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+// Create data sample
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<ShopDbContext>();
+    DataInitializer.SeedData(dbContext);
+}
+
 // ============================================
 // 4️⃣ Run application with safe Serilog shutdown
 // ============================================
+
 try
 {
     Log.Information("Starting up the application...");
