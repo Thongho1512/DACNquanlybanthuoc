@@ -1,8 +1,6 @@
-﻿using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using quanlybanthuoc.Data.Entities;
 using quanlybanthuoc.Helpers;
-using System.Threading.Tasks;
 
 namespace quanlybanthuoc.Data
 {
@@ -10,38 +8,63 @@ namespace quanlybanthuoc.Data
     {
         public static async Task SeedData(ShopDbContext context)
         {
-            // Đảm bảo DB được tạo
-            context.Database.EnsureCreated();
-
-            // create default roles
-            if (!context.VaiTros.Any())
+            try
             {
-                var roles = new List<VaiTro>
-                {
-                    new VaiTro{ TenVaiTro = "ADMIN", TrangThai = true},
-                    new VaiTro{ TenVaiTro = "USER", TrangThai=true}
-                };
+                // Đảm bảo DB được tạo
+                await context.Database.MigrateAsync();
+                Console.WriteLine("✓ Database ensured created");
 
-                await context.VaiTros.AddRangeAsync(roles);
+                // create default roles
+                if (!await context.VaiTros.AnyAsync(vt => vt.TenVaiTro == "ADMIN"))
+                {
+                    await context.VaiTros.AddAsync(new VaiTro { TenVaiTro = "ADMIN", TrangThai = true });
+                }
+
+                if (!await context.VaiTros.AnyAsync(vt => vt.TenVaiTro == "USER"))
+                {
+                    await context.VaiTros.AddAsync(new VaiTro { TenVaiTro = "USER", TrangThai = true });
+                }
                 await context.SaveChangesAsync();
+                Console.WriteLine("✓ Roles checked/created: ADMIN, USER");
+
+                // Lấy vai trò ADMIN
+                var vaiTro = await context.VaiTros
+                    .FirstOrDefaultAsync(vt => vt.TenVaiTro == "ADMIN");
+
+                if (vaiTro == null)
+                {
+                    Console.WriteLine("✗ ADMIN role not found!");
+                    return;
+                }
+
+                // create default admin user
+                if (!await context.NguoiDungs.AnyAsync(nd => nd.IdvaiTro == vaiTro.Id))
+                {
+                    var nguoiDung = new NguoiDung
+                    {
+                        TenDangNhap = "admin",
+                        MatKhau = PasswordHelper.HashPassword("admin123"),
+                        TrangThai = true,
+                        IdvaiTro = vaiTro.Id,
+                        NgayTao = DateOnly.FromDateTime(DateTime.Now),
+                        HoTen = "Administrator"
+                    };
+
+                    await context.NguoiDungs.AddAsync(nguoiDung);
+                    await context.SaveChangesAsync();
+                    Console.WriteLine("✓ Admin user created");
+                    Console.WriteLine("  Username: admin");
+                    Console.WriteLine("  Password: admin123");
+                }
+
+                Console.WriteLine("========================================");
+                Console.WriteLine("Data initialization completed!");
+                Console.WriteLine("========================================");
             }
-
-            var vaiTro = context.VaiTros.FirstOrDefault(vaiTro => vaiTro.TenVaiTro == "ADMIN");
-            // create default admin user
-            if (vaiTro != null && !context.NguoiDungs.Any(nguoiDung => nguoiDung.IdvaiTro == vaiTro.Id))
+            catch (Exception ex)
             {
-                var nguoiDung = new NguoiDung
-                {
-                    TenDangNhap = "admin1",
-                    MatKhau = PasswordHelper.HashPassword("admin123"),
-                    TrangThai = true,
-                    IdvaiTro = vaiTro!.Id,
-                    NgayTao = DateOnly.FromDateTime(DateTime.Now),
-                    HoTen = "Administrator"
-                };
-
-                await context.NguoiDungs.AddAsync(nguoiDung);
-                await context.SaveChangesAsync();
+                Console.WriteLine($"✗ Error: {ex.Message}");
+                throw;
             }
         }
     }

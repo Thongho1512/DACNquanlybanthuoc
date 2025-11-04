@@ -1,5 +1,6 @@
 ﻿using Microsoft.IdentityModel.Tokens;
 using quanlybanthuoc.Data.Entities;
+using quanlybanthuoc.Data.Repositories;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -9,10 +10,15 @@ namespace quanlybanthuoc.Services.Impl
 {
     public class TokenService : ITokenService
     {
-        public readonly IConfiguration _configuration;
-        public TokenService(IConfiguration configuration)
+        private readonly IConfiguration _configuration;
+        private readonly ILogger<TokenService> _logger;
+        private readonly IUnitOfWork _unitOfWork;
+
+        public TokenService(IConfiguration configuration, ILogger<TokenService> logger, IUnitOfWork unitOfWork)
         {
             _configuration = configuration;
+            _logger = logger;
+            _unitOfWork = unitOfWork;
         }
 
         public string GenerateAccessToken(NguoiDung nguoiDung)
@@ -21,11 +27,17 @@ namespace quanlybanthuoc.Services.Impl
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"]!));
             var cred = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
+            _logger.LogInformation($" id = {nguoiDung.Id.ToString()}");
+            _logger.LogInformation($"ten dang nhap: {nguoiDung.TenDangNhap}");
+            _logger.LogInformation($"ten vai tro: {nguoiDung.IdvaiTroNavigation?.TenVaiTro}");
+
+            var tenVaiTro = getTenVaiTro(nguoiDung.IdvaiTro!.Value).Result;
+
             var claims = new[]
             {
                 new Claim(ClaimTypes.NameIdentifier, nguoiDung.Id.ToString()),
                 new Claim(ClaimTypes.Name, nguoiDung.TenDangNhap!),
-                new Claim(ClaimTypes.Role, nguoiDung.IdvaiTroNavigation?.TenVaiTro!)
+                new Claim(ClaimTypes.Role, tenVaiTro)
             };
 
             var token = new JwtSecurityToken(
@@ -37,6 +49,12 @@ namespace quanlybanthuoc.Services.Impl
              );
 
             return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
+        private  async Task<string> getTenVaiTro(int idVaiTro)
+        {
+            var vaiTro = await _unitOfWork.VaiTroRepository.GetByIdAsync(idVaiTro);
+            return vaiTro!.TenVaiTro!;
         }
 
         public string GenerateRefreshToken()

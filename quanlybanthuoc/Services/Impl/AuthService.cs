@@ -1,42 +1,54 @@
-﻿using Azure.Core;
+﻿using AutoMapper;
+using Azure.Core;
 using quanlybanthuoc.Data.Entities;
 using quanlybanthuoc.Data.Repositories;
 using quanlybanthuoc.Dtos.Auth;
+using quanlybanthuoc.Dtos.NguoiDung;
 using quanlybanthuoc.Middleware.Exceptions;
+using System.Globalization;
 
 namespace quanlybanthuoc.Services.Impl
 {
     public class AuthService : IAuthService
     {
-        public readonly IUnitOfWork _unitOfWork;
-        public readonly ILogger<AuthService> _logger;
-        public readonly ITokenService _tokenService;
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly ILogger<AuthService> _logger;
+        private readonly ITokenService _tokenService;
+        private readonly IMapper _mapper;
+        private readonly IConfiguration _configuration;
 
-        public AuthService(IUnitOfWork unitOfWork, ILogger<AuthService> logger, ITokenService tokenService)
+        public AuthService(IUnitOfWork unitOfWork, ILogger<AuthService> logger, ITokenService tokenService, IMapper mapper, IConfiguration configuration)
         {
             _unitOfWork = unitOfWork;
             _logger = logger;
             _tokenService = tokenService;
+            _mapper = mapper;
+            _configuration = configuration;
         }
 
+        
         public async Task<LoginResponse> LoginAsync(LoginRequest request)
         {
+            _logger.LogInformation("get user's information");
             // check login info
             var nguoiDung = await _unitOfWork.NguoiDungRepository.GetByTenDangNhapAsync(request.TenDangNhap);
-            if (nguoiDung == null || !VerifyPassword(request.MatKhau, nguoiDung.MatKhau!))
+            if (nguoiDung == null || !VerifyPassword(request.MatKhau, nguoiDung.MatKhau!) || nguoiDung.TrangThai == false)
             {
                 throw new NotFoundException("Thông tin đăng nhập không hợp lệ.");
             }
+            Console.WriteLine("User found and password verified");
 
             var accessToken = _tokenService.GenerateAccessToken(nguoiDung);
             var refreshToken = _tokenService.GenerateRefreshToken();
+            var nguoiDungDto = _mapper.Map<NguoiDungDto>(nguoiDung);
 
             var refreshTokenEntity = new RefreshToken
             {
                 Token = refreshToken,
                 IdNguoiDung = nguoiDung.Id,
                 NgayTao = DateTime.Now,
-                NgayHetHan = DateTime.Now.AddDays(7)
+                NgayHetHan = DateTime.Now.AddDays(double.Parse(_configuration["Jwt:RefreshTokenExpirationDays"]!)),
+                
             };
 
             await _unitOfWork.RefreshTokenRepository.CreateAsync(refreshTokenEntity);
@@ -46,14 +58,13 @@ namespace quanlybanthuoc.Services.Impl
             {
                 AccessToken = accessToken,
                 RefreshToken = refreshToken,
-                TenDangNhap = nguoiDung.TenDangNhap!,
-                VaiTro = nguoiDung.IdvaiTroNavigation?.TenVaiTro!
+                NguoiDungDto = nguoiDungDto
             };
         }
 
-        public async Task LogoutAsync(RefreshTokenRequest request)
+        public async Task LogoutAsync(string request)
         {
-            var token = await _unitOfWork.RefreshTokenRepository.GetByTokenAsync(request.RefreshToken);
+            var token = await _unitOfWork.RefreshTokenRepository.GetByTokenAsync(request);
             if(token == null)
             {
                 throw new NotFoundException("Refresh token không hợp lệ.");
@@ -67,9 +78,9 @@ namespace quanlybanthuoc.Services.Impl
             
         }
 
-        public async Task<LoginResponse> RefreshTokenAsync(RefreshTokenRequest request)
+        public async Task<LoginResponse> RefreshTokenAsync(string request)
         {
-            var token = await _unitOfWork.RefreshTokenRepository.GetByTokenAsync(request.RefreshToken);
+            var token = await _unitOfWork.RefreshTokenRepository.GetByTokenAsync(request);
             if(token == null)
             {
                 throw new NotFoundException("Refresh token không hợp lệ.");
@@ -84,8 +95,10 @@ namespace quanlybanthuoc.Services.Impl
                 throw new UnauthorizedException("Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.");
             }
 
+            var nguoiDung = token.NguoiDung;
+
             await _unitOfWork.BeginTransactionAsync();
-            var accessToken = _tokenService.GenerateAccessToken(token.NguoiDung!);
+            var accessToken = _tokenService.GenerateAccessToken(nguoiDung!);
             var refreshToken = _tokenService.GenerateRefreshToken();
             try
             {
@@ -95,7 +108,7 @@ namespace quanlybanthuoc.Services.Impl
                     Token = refreshToken,
                     IdNguoiDung = token.IdNguoiDung,
                     NgayTao = DateTime.Now,
-                    NgayHetHan = DateTime.Now.AddDays(7)
+                    NgayHetHan = DateTime.Now.AddDays(double.Parse(_configuration["Jwt:RefreshTokenExpirationDays"]!))
                 });
                 await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransactionAsync();
@@ -107,12 +120,14 @@ namespace quanlybanthuoc.Services.Impl
                 throw new Exception("Lỗi khi làm mới refresh token.");
             }
 
+            var nguoiDungDto = _mapper.Map<NguoiDungDto>(nguoiDung);
+
+
             return new LoginResponse
             {
                 AccessToken = accessToken,
                 RefreshToken = refreshToken,
-                TenDangNhap = token.NguoiDung?.TenDangNhap!,
-                VaiTro = token.NguoiDung?.IdvaiTroNavigation?.TenVaiTro!
+                NguoiDungDto = nguoiDungDto
             };
         }
 

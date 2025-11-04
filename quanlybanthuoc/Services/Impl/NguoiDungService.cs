@@ -25,10 +25,12 @@ namespace quanlybanthuoc.Services.Impl
         {
             _logger.LogInformation("Create new user");
             var entity = _mapper.Map<NguoiDung>(dto);
+            var role = await _unitOfWork.VaiTroRepository.GetByTenVaiTroAsync("USER");
+
             entity.NgayTao = DateOnly.FromDateTime(DateTime.Now);
             entity.TrangThai = true;
             entity.MatKhau = PasswordHelper.HashPassword(dto.MatKhau!);
-            entity.IdvaiTro = _unitOfWork.VaiTroRepository.GetByTenVaiTroAsync("USER").Id;
+            entity.IdvaiTro = role!.Id;
             await _unitOfWork.NguoiDungRepository.CreateAsync(entity);
             await _unitOfWork.SaveChangesAsync();
             var result = _mapper.Map<NguoiDungDto>(entity);

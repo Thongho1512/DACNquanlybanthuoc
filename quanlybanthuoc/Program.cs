@@ -74,7 +74,22 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend",
+        policy => policy
+            .WithOrigins("http://127.0.0.1:5500") // hoặc "http://localhost:5500"
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials());
+});
+
+// seed data initializer
+builder.Services.AddTransient<DataInitializer>();
+
 var app = builder.Build();
+
+app.UseCors("AllowFrontend");
 
 // ============================================
 // 3️⃣ Configure HTTP request pipeline
@@ -106,7 +121,7 @@ app.MapControllers();
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<ShopDbContext>();
-    DataInitializer.SeedData(dbContext);
+    await DataInitializer.SeedData(dbContext);
 }
 
 // ============================================
