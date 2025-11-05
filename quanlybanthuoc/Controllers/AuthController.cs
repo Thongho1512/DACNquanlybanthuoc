@@ -32,8 +32,8 @@ namespace quanlybanthuoc.Controllers
             Response.Cookies.Append("refreshToken", result.RefreshToken, new CookieOptions
             {
                 HttpOnly = true, // JS can't access
-                Secure = true, // only sent over HTTPS
-                SameSite = SameSiteMode.Strict, // not sent with cross-site requests
+                Secure = true, 
+                SameSite = SameSiteMode.None,
                 Expires = DateTimeOffset.Now.AddDays(double.Parse(_configuration["Jwt:RefreshTokenExpirationDays"]!))
             });
 
@@ -64,8 +64,8 @@ namespace quanlybanthuoc.Controllers
             Response.Cookies.Append("refreshToken", result.RefreshToken, new CookieOptions
             {
                 HttpOnly = true, // JS can't access
-                Secure = true, // only sent over HTTPS
-                SameSite = SameSiteMode.Strict, // not sent with cross-site requests
+                Secure = true, 
+                SameSite = SameSiteMode.None, 
                 Expires = DateTimeOffset.Now.AddDays(double.Parse(_configuration["Jwt:RefreshTokenExpirationDays"]!))
             });
 
