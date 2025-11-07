@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using quanlybanthuoc.Data.Entities;
 using quanlybanthuoc.Dtos.NguoiDung;
+using quanlybanthuoc.Dtos.Thuoc; 
 
 namespace quanlybanthuoc.Mappings
 {
@@ -8,12 +9,16 @@ namespace quanlybanthuoc.Mappings
     {
         public MappingProfile()
         {
-            // Create your mappings here
             // NguoiDung mappings
             CreateMap<NguoiDungDto, NguoiDung>();
             CreateMap<CreateNguoiDungDto, NguoiDung>();
             CreateMap<NguoiDung, NguoiDungDto>();
             CreateMap<UpdateNguoiDungDto, NguoiDung>();
+
+            // Thuoc mappings
+            CreateMap<Thuoc, ThuocDto>();
+            CreateMap<CreateThuocDto, Thuoc>();
+            CreateMap<UpdateThuocDto, Thuoc>();
         }
     }
 }

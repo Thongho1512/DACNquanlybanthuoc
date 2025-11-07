@@ -7,6 +7,7 @@ public partial class DanhMuc
     public string? TenDanhMuc { get; set; }
 
     public string? MoTa { get; set; }
+    public Boolean TrangThai { get; set; }
 
     public virtual ICollection<Thuoc> Thuocs { get; set; } = new List<Thuoc>();
 }
