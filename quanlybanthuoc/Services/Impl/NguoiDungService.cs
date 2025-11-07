@@ -70,7 +70,13 @@ namespace quanlybanthuoc.Services.Impl
         {
             _logger.LogInformation($"Soft delete by id: {id}");
             var entity = await _unitOfWork.NguoiDungRepository.GetByIdAsync(id);
-
+            if(entity == null)
+            {
+                throw new NotFoundException("Không tìm thấy người dùng.");
+            }
+            entity.TrangThai = false;
+            await _unitOfWork.NguoiDungRepository.SoftDelete(entity);
+            await _unitOfWork.SaveChangesAsync();
         }
 
         public async Task updateAsync(int id, UpdateNguoiDungDto dto)

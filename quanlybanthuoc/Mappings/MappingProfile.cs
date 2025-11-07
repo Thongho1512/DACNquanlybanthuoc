@@ -13,6 +13,7 @@ namespace quanlybanthuoc.Mappings
             CreateMap<NguoiDungDto, NguoiDung>();
             CreateMap<CreateNguoiDungDto, NguoiDung>();
             CreateMap<NguoiDung, NguoiDungDto>();
+            CreateMap<UpdateNguoiDungDto, NguoiDung>();
         }
     }
 }

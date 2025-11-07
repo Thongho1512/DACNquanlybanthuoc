@@ -57,6 +57,17 @@ namespace quanlybanthuoc.Controllers
             return Ok(result);
         }
 
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateNguoiDung(int id, [FromBody] UpdateNguoiDungDto dto)
+        {
+            _logger.LogInformation($"Updating NguoiDung with id: {id}");
+            if (dto == null) { 
+                throw new ArgumentNullException(nameof(dto));
+            }
 
+            await _nguoiDungService.updateAsync(id, dto);
+
+            return NoContent();
+        }
     }
 }

@@ -31,11 +31,12 @@ namespace quanlybanthuoc.Data.Repositories.Impl
 
             var totalAmount  = await query.CountAsync();
 
-            var items = query.AsNoTracking()
+            var items = await query.AsNoTracking()
+                .Include(nguoiDung => nguoiDung.IdvaiTroNavigation)
                 .OrderBy(nguoiDung => nguoiDung.Id)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
-                .ToList();
+                .ToListAsync();
 
             return new PagedResult<NguoiDung>
             {
