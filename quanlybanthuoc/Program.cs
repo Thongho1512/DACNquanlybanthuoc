@@ -14,14 +14,14 @@ using Microsoft.IdentityModel.Tokens;
 var builder = WebApplication.CreateBuilder(args);
 
 // ============================================
-// 1️⃣ Configure Serilog (read from appsettings.json)
+// 1️⃣ Configure Serilog
 // ============================================
 Log.Logger = new LoggerConfiguration()
-    .ReadFrom.Configuration(builder.Configuration) // read Serilog section from appsettings.json
+    .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
     .CreateLogger();
 
-builder.Host.UseSerilog(); // replace default logging
+builder.Host.UseSerilog();
 
 // ============================================
 // 2️⃣ Add services to the container
@@ -44,15 +44,28 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<INguoiDungRepository, NguoiDungRepository>();
 builder.Services.AddScoped<IVaiTroRepository, VaiTroRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
-builder.Services.AddScoped<IThuocRepository, ThuocRepository>(); 
+builder.Services.AddScoped<IThuocRepository, ThuocRepository>();
+builder.Services.AddScoped<IDanhMucRepository, DanhMucRepository>();
+builder.Services.AddScoped<INhaCungCapRepository, NhaCungCapRepository>();
+builder.Services.AddScoped<IChiNhanhRepository, ChiNhanhRepository>();
+builder.Services.AddScoped<IDanhMucRepository, DanhMucRepository>();
+builder.Services.AddScoped<IKhachHangRepository, KhachHangRepository>();
+
 
 // Services
 builder.Services.AddScoped<INguoiDungService, NguoiDungService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IThuocService, ThuocService>();
+builder.Services.AddScoped<IDanhMucService, DanhMucService>();
+builder.Services.AddScoped<INhaCungCapService, NhaCungCapService>();
+builder.Services.AddScoped<IChiNhanhService, ChiNhanhService>();
+builder.Services.AddScoped<IKhachHangService, KhachHangService>();
 
-// authentication & authorization
+
+// ============================================
+// 3️⃣ Authentication & Authorization
+// ============================================
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 var secretKey = Encoding.UTF8.GetBytes(jwtSettings["Key"]!);
 
@@ -67,17 +80,60 @@ builder.Services.AddAuthentication(options =>
     {
         ValidateIssuer = true,
         ValidateAudience = true,
-        ValidateLifetime = true, // validate the token expiration
-        ValidateIssuerSigningKey = true, // validate the signing key
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
         ValidIssuer = jwtSettings["Issuer"],
         ValidAudience = jwtSettings["Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(secretKey), // symmetricSecurityKey use the HMACSHA256 algorithm
-        ClockSkew = TimeSpan.Zero // eliminate default clock skew
+        IssuerSigningKey = new SymmetricSecurityKey(secretKey),
+        ClockSkew = TimeSpan.Zero
     };
 });
 
-builder.Services.AddAuthorization();
+// ============================================
+// 4️⃣ AUTHORIZATION POLICIES THEO TÀI LIỆU
+// ============================================
+builder.Services.AddAuthorization(options =>
+{
+    // =========================================
+    // POLICY: AdminOnly - Chỉ ADMIN
+    // =========================================
+    options.AddPolicy("AdminOnly", policy =>
+        policy.RequireRole("ADMIN"));
 
+    // =========================================
+    // POLICY: AdminOrManager - ADMIN hoặc MANAGER
+    // =========================================
+    options.AddPolicy("AdminOrManager", policy =>
+        policy.RequireRole("ADMIN", "MANAGER"));
+
+    // =========================================
+    // POLICY: AllStaff - Tất cả nhân viên (trừ ADMIN)
+    // =========================================
+    options.AddPolicy("AllStaff", policy =>
+        policy.RequireRole("MANAGER", "STAFF", "WAREHOUSE_STAFF"));
+
+    // =========================================
+    // POLICY: SalesStaff - Nhân viên bán hàng
+    // =========================================
+    options.AddPolicy("SalesStaff", policy =>
+        policy.RequireRole("ADMIN", "MANAGER", "STAFF"));
+
+    // =========================================
+    // POLICY: WarehouseStaff - Nhân viên kho
+    // =========================================
+    options.AddPolicy("WarehouseStaff", policy =>
+        policy.RequireRole("ADMIN", "MANAGER", "WAREHOUSE_STAFF"));
+
+    // =========================================
+    // POLICY: AllUsers - Tất cả người dùng đã đăng nhập
+    // =========================================
+    options.AddPolicy("AllUsers", policy =>
+        policy.RequireAuthenticatedUser());
+});
+
+// ============================================
+// 5️⃣ CORS Configuration
+// ============================================
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend",
@@ -92,7 +148,7 @@ builder.Services.AddCors(options =>
             .AllowCredentials());
 });
 
-// seed data initializer
+// Data initializer
 builder.Services.AddTransient<DataInitializer>();
 
 var app = builder.Build();
@@ -100,7 +156,7 @@ var app = builder.Build();
 app.UseCors("AllowFrontend");
 
 // ============================================
-// 3️⃣ Configure HTTP request pipeline
+// 6️⃣ Configure HTTP request pipeline
 // ============================================
 if (app.Environment.IsDevelopment())
 {
@@ -116,7 +172,7 @@ app.UseHttpsRedirection();
 // Custom exception middleware
 app.UseMiddleware<ExceptionMiddleware>();
 
-// Serilog request logging (logs every HTTP request)
+// Serilog request logging
 app.UseSerilogRequestLogging();
 
 // Authentication & Authorization
@@ -125,7 +181,9 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// Create data sample
+// ============================================
+// 7️⃣ Seed Data (4 Roles + Sample Users)
+// ============================================
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<ShopDbContext>();
@@ -133,9 +191,8 @@ using (var scope = app.Services.CreateScope())
 }
 
 // ============================================
-// 4️⃣ Run application with safe Serilog shutdown
+// 8️⃣ Run application
 // ============================================
-
 try
 {
     Log.Information("Starting up the application...");

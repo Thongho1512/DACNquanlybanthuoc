@@ -9,12 +9,28 @@ namespace quanlybanthuoc.Data.Repositories.Impl
         private NguoiDungRepository? _nguoiDungRepository;
         private RefreshTokenRepository? _refreshTokenRepository;
         private VaiTroRepository? _vaiTroRepository;
-        private ThuocRepository? _thuocRepository; // ✅ THÊM MỚI
+        private ThuocRepository? _thuocRepository;
+        private DanhMucRepository? _danhMucRepository;
+        private NhaCungCapRepository? _nhaCungCapRepository;
+        private ChiNhanhRepository? _chiNhanhRepository;
+        private KhachHangRepository? _khachHangRepository;
 
         public UnitOfWork(ShopDbContext context)
         {
             _context = context;
         }
+
+        public IDanhMucRepository DanhMucRepository =>
+            _danhMucRepository ??= new DanhMucRepository(_context);
+
+        public INhaCungCapRepository NhaCungCapRepository =>
+            _nhaCungCapRepository ??= new NhaCungCapRepository(_context);
+
+        public IChiNhanhRepository ChiNhanhRepository =>
+            _chiNhanhRepository ??= new ChiNhanhRepository(_context);
+
+        public IKhachHangRepository KhachHangRepository =>
+            _khachHangRepository ??= new KhachHangRepository(_context);
 
         public IVaiTroRepository VaiTroRepository =>
             _vaiTroRepository ??= new VaiTroRepository(_context);
