@@ -1,4 +1,4 @@
-﻿// File: quanlybanthuoc/Services/Impl/DonHangService.cs (UPDATED VERSION)
+﻿// File: quanlybanthuoc/Services/Impl/DonHangService.cs (HOÀN CHỈNH)
 using AutoMapper;
 using quanlybanthuoc.Data.Entities;
 using quanlybanthuoc.Data.Repositories;
@@ -15,6 +15,15 @@ namespace quanlybanthuoc.Services.Impl
         private readonly IMapper _mapper;
         private readonly IKhachHangService _khachHangService;
 
+        // ====================================================================
+        // NGHIỆP VỤ ĐIỂM THƯỞNG - CÓ THỂ CHỈNH SỬA
+        // ====================================================================
+        private const decimal TY_LE_QUYDO_DIEM_SANG_TIEN = 1000m;  // 1 điểm = 1,000 VNĐ
+        private const decimal TY_LE_TICH_DIEM = 10000m;            // 10,000 VNĐ = 1 điểm
+        private const int SO_DIEM_TOI_THIEU_SU_DUNG = 10;         // Tối thiểu 10 điểm mới được dùng
+        private const decimal TY_LE_GIAM_GIA_TOI_DA = 0.5m;       // Giảm tối đa 50% giá trị đơn hàng
+        // ====================================================================
+
         public DonHangService(
             IUnitOfWork unitOfWork,
             ILogger<DonHangService> logger,
@@ -29,7 +38,11 @@ namespace quanlybanthuoc.Services.Impl
 
         public async Task<DonHangDto> CreateAsync(CreateDonHangDto dto, int idNguoiDung)
         {
-            _logger.LogInformation("Creating new order with inventory deduction");
+            _logger.LogInformation("=== BẮT ĐẦU TẠO ĐỚN HÀNG VỚI TỰ ĐỘNG SỬ DỤNG ĐIỂM ===");
+
+            // ================================================================
+            // BƯỚC 1: VALIDATE DỮ LIỆU ĐẦU VÀO
+            // ================================================================
 
             // Validate chi nhánh
             var chiNhanh = await _unitOfWork.ChiNhanhRepository.GetByIdAsync(dto.IdchiNhanh);
@@ -47,6 +60,8 @@ namespace quanlybanthuoc.Services.Impl
                 {
                     throw new NotFoundException("Khách hàng không tồn tại.");
                 }
+
+                _logger.LogInformation($"Khách hàng: {khachHang.TenKhachHang} - Điểm hiện tại: {khachHang.DiemTichLuy ?? 0}");
             }
 
             // Validate phương thức thanh toán
@@ -60,10 +75,12 @@ namespace quanlybanthuoc.Services.Impl
 
             try
             {
-                // Tính toán tổng tiền
+                // ================================================================
+                // BƯỚC 2: TÍNH TOÁN TỔNG TIỀN VÀ TẠO CHI TIẾT ĐƠN HÀNG
+                // ================================================================
+
                 decimal tongTien = 0;
                 var chiTietList = new List<ChiTietDonHang>();
-                var chiTietLoHangList = new List<ChiTietLoHang>();
 
                 foreach (var item in dto.ChiTietDonHangs)
                 {
@@ -74,43 +91,62 @@ namespace quanlybanthuoc.Services.Impl
                         throw new NotFoundException($"Thuốc ID {item.Idthuoc} không tồn tại.");
                     }
 
-                    var thanhTien = item.SoLuong * item.DonGia;
-                    tongTien += thanhTien;
+                    var thanhTienItem = item.SoLuong * item.DonGia;
+                    tongTien += thanhTienItem;
 
                     chiTietList.Add(new ChiTietDonHang
                     {
                         Idthuoc = item.Idthuoc,
                         SoLuong = item.SoLuong,
                         DonGia = item.DonGia,
-                        ThanhTien = thanhTien
+                        ThanhTien = thanhTienItem
                     });
                 }
 
-                // Tính tiền giảm giá từ điểm tích lũy
+                _logger.LogInformation($"Tổng tiền đơn hàng: {tongTien:N0} VNĐ");
+
+                // ================================================================
+                // BƯỚC 3: TỰ ĐỘNG TÍNH TOÁN VÀ SỬ DỤNG ĐIỂM TÍCH LŨY
+                // ================================================================
+
                 decimal tienGiamGia = 0;
                 int diemSuDung = 0;
+                int diemKhaDungCuaKhachHang = khachHang?.DiemTichLuy ?? 0;
 
-                if (dto.DiemSuDung.HasValue && dto.DiemSuDung.Value > 0 && khachHang != null)
+                if (khachHang != null && diemKhaDungCuaKhachHang >= SO_DIEM_TOI_THIEU_SU_DUNG)
                 {
-                    if (khachHang.DiemTichLuy < dto.DiemSuDung.Value)
-                    {
-                        throw new BadRequestException("Số điểm sử dụng vượt quá điểm tích lũy hiện có.");
-                    }
+                    // Tính số tiền giảm giá tối đa (50% giá trị đơn hàng)
+                    decimal tienGiamGiaToiDa = tongTien * TY_LE_GIAM_GIA_TOI_DA;
 
-                    // Quy đổi: 100 điểm = 10,000 VNĐ
-                    diemSuDung = dto.DiemSuDung.Value;
-                    tienGiamGia = (diemSuDung / 100m) * 10000;
+                    // Tính số điểm tối đa có thể sử dụng dựa trên giới hạn giảm giá
+                    int diemToiDaCoTheSuDung = (int)(tienGiamGiaToiDa / TY_LE_QUYDO_DIEM_SANG_TIEN);
 
-                    // Giảm giá không vượt quá tổng tiền
-                    if (tienGiamGia > tongTien)
-                    {
-                        tienGiamGia = tongTien;
-                    }
+                    // Số điểm thực tế sử dụng = MIN(điểm khách hàng có, điểm tối đa được dùng)
+                    diemSuDung = Math.Min(diemKhaDungCuaKhachHang, diemToiDaCoTheSuDung);
+
+                    // Tính tiền giảm giá từ điểm
+                    tienGiamGia = diemSuDung * TY_LE_QUYDO_DIEM_SANG_TIEN;
+
+                    _logger.LogInformation($"╔═══════════════════════════════════════════════════════╗");
+                    _logger.LogInformation($"║          THÔNG TIN SỬ DỤNG ĐIỂM TÍCH LŨY            ║");
+                    _logger.LogInformation($"╠═══════════════════════════════════════════════════════╣");
+                    _logger.LogInformation($"║ Điểm khả dụng:            {diemKhaDungCuaKhachHang,10} điểm          ║");
+                    _logger.LogInformation($"║ Điểm sử dụng:             {diemSuDung,10} điểm          ║");
+                    _logger.LogInformation($"║ Tiền giảm giá:            {tienGiamGia,10:N0} VNĐ        ║");
+                    _logger.LogInformation($"║ Tỷ lệ giảm:               {(tienGiamGia / tongTien) * 100,10:F1}%           ║");
+                    _logger.LogInformation($"╚═══════════════════════════════════════════════════════╝");
+                }
+                else if (khachHang != null)
+                {
+                    _logger.LogInformation($"⚠️  Khách hàng có {diemKhaDungCuaKhachHang} điểm (< {SO_DIEM_TOI_THIEU_SU_DUNG} điểm tối thiểu)");
                 }
 
                 decimal thanhTien = tongTien - tienGiamGia;
 
-                // Tạo đơn hàng
+                // ================================================================
+                // BƯỚC 4: TẠO ĐƠN HÀNG
+                // ================================================================
+
                 var donHang = new DonHang
                 {
                     IdnguoiDung = idNguoiDung,
@@ -126,51 +162,41 @@ namespace quanlybanthuoc.Services.Impl
                 await _unitOfWork.DonHangRepository.CreateAsync(donHang);
                 await _unitOfWork.SaveChangesAsync();
 
-                // Tạo chi tiết đơn hàng và TRỪ TỒN KHO
+                _logger.LogInformation($"✅ Đã tạo đơn hàng ID: {donHang.Id}");
+
+                // ================================================================
+                // BƯỚC 5: TẠO CHI TIẾT ĐƠN HÀNG VÀ TRỪ TỒN KHO (FIFO)
+                // ================================================================
+
                 foreach (var chiTiet in chiTietList)
                 {
                     chiTiet.IddonHang = donHang.Id;
 
-                    // ✅ LOGIC TRỪ KHO THEO FIFO (First In, First Out)
                     int soLuongCanTru = chiTiet.SoLuong ?? 0;
-
-                    // Lấy danh sách lô hàng của thuốc này, sắp xếp theo ngày hết hạn (FIFO)
                     var loHangs = await _unitOfWork.LoHangRepository.GetByThuocIdAsync(chiTiet.Idthuoc ?? 0);
 
                     foreach (var loHang in loHangs)
                     {
                         if (soLuongCanTru <= 0) break;
 
-                        // Lấy kho hàng của lô này tại chi nhánh
                         var khoHang = await _unitOfWork.KhoHangRepository
                             .GetByChiNhanhAndLoHangAsync(dto.IdchiNhanh, loHang.Id);
 
                         if (khoHang == null || khoHang.SoLuongTon <= 0)
-                        {
-                            continue; // Bỏ qua lô hàng không có tồn kho
-                        }
+                            continue;
 
-                        // Tính số lượng trừ từ lô này
                         int soLuongTruLoNay = Math.Min(soLuongCanTru, khoHang.SoLuongTon ?? 0);
 
-                        // Trừ tồn kho
                         await _unitOfWork.KhoHangRepository.TruTonKhoAsync(
                             dto.IdchiNhanh,
                             loHang.Id,
                             soLuongTruLoNay);
 
-                        // Lưu chi tiết lô hàng
-                        var chiTietLoHang = new ChiTietLoHang
-                        {
-                            IdkhoHang = khoHang.Id,
-                            SoLuong = soLuongTruLoNay
-                        };
-                        chiTietLoHangList.Add(chiTietLoHang);
+                        _logger.LogInformation($"  → Trừ {soLuongTruLoNay} {chiTiet.IdthuocNavigation?.DonVi} từ lô {loHang.SoLo}");
 
                         soLuongCanTru -= soLuongTruLoNay;
                     }
 
-                    // Nếu vẫn còn số lượng cần trừ => không đủ hàng
                     if (soLuongCanTru > 0)
                     {
                         throw new BadRequestException(
@@ -182,32 +208,34 @@ namespace quanlybanthuoc.Services.Impl
                 await _unitOfWork.ChiTietDonHangRepository.CreateRangeAsync(chiTietList);
                 await _unitOfWork.SaveChangesAsync();
 
-                // Lưu chi tiết lô hàng
-                foreach (var chiTietLoHang in chiTietLoHangList)
-                {
-                    // Link với ChiTietDonHang tương ứng
-                    var chiTietDh = chiTietList.FirstOrDefault(ct =>
-                        ct.Idthuoc == chiTietLoHang.IdkhoHangNavigation?.IdloHangNavigation?.Idthuoc);
+                // ================================================================
+                // BƯỚC 6: CẬP NHẬT ĐIỂM TÍCH LŨY CHO KHÁCH HÀNG
+                // ================================================================
 
-                    if (chiTietDh != null)
-                    {
-                        chiTietLoHang.IdchiTietDh = chiTietDh.Id;
-                    }
-                }
-
-                // Note: Bạn cần tạo repository cho ChiTietLoHang nếu muốn lưu
-                // Hiện tại có thể bỏ qua phần này nếu không cần tracking chi tiết lô
-
-                // Cập nhật điểm tích lũy
                 if (khachHang != null)
                 {
-                    // Trừ điểm đã sử dụng
-                    int diemTru = diemSuDung;
+                    // Tính điểm được cộng từ đơn hàng này
+                    // Công thức: 10,000 VNĐ = 1 điểm (tính trên thành tiền sau giảm giá)
+                    int diemCong = (int)(thanhTien / TY_LE_TICH_DIEM);
 
-                    // Cộng điểm mới: 100,000 VNĐ = 10 điểm
-                    int diemCong = (int)(thanhTien / 100000) * 10;
+                    // Cập nhật điểm: Cộng điểm mới, Trừ điểm đã sử dụng
+                    await _khachHangService.UpdateDiemTichLuyAsync(
+                        khachHang.Id,
+                        diemCong,      // Điểm được cộng
+                        diemSuDung     // Điểm đã sử dụng
+                    );
 
-                    await _khachHangService.UpdateDiemTichLuyAsync(khachHang.Id, diemCong, diemTru);
+                    // Tính điểm mới sau giao dịch
+                    int diemMoi = (khachHang.DiemTichLuy ?? 0) + diemCong - diemSuDung;
+
+                    _logger.LogInformation($"╔═══════════════════════════════════════════════════════╗");
+                    _logger.LogInformation($"║          CẬP NHẬT ĐIỂM TÍCH LŨY THÀNH CÔNG          ║");
+                    _logger.LogInformation($"╠═══════════════════════════════════════════════════════╣");
+                    _logger.LogInformation($"║ Điểm ban đầu:             {khachHang.DiemTichLuy ?? 0,10} điểm          ║");
+                    _logger.LogInformation($"║ Điểm sử dụng:            -{diemSuDung,10} điểm          ║");
+                    _logger.LogInformation($"║ Điểm được cộng:          +{diemCong,10} điểm          ║");
+                    _logger.LogInformation($"║ Điểm sau giao dịch:       {diemMoi,10} điểm          ║");
+                    _logger.LogInformation($"╚═══════════════════════════════════════════════════════╝");
 
                     // Lưu lịch sử điểm
                     var lichSuDiem = new LichSuDiem
@@ -215,7 +243,7 @@ namespace quanlybanthuoc.Services.Impl
                         IdkhachHang = khachHang.Id,
                         IddonHang = donHang.Id,
                         DiemCong = diemCong,
-                        DiemTru = diemTru,
+                        DiemTru = diemSuDung,
                         NgayGiaoDich = DateOnly.FromDateTime(DateTime.Now)
                     };
 
@@ -225,17 +253,23 @@ namespace quanlybanthuoc.Services.Impl
 
                 await _unitOfWork.CommitTransactionAsync();
 
-                // Load lại với details
+                _logger.LogInformation("=== HOÀN TẤT TẠO ĐƠN HÀNG THÀNH CÔNG ===");
+
+                // Load lại với details để trả về
                 var result = await GetByIdAsync(donHang.Id);
                 return result!;
             }
             catch (Exception ex)
             {
                 await _unitOfWork.RollbackTransactionAsync();
-                _logger.LogError(ex, "Error creating order with inventory deduction");
+                _logger.LogError(ex, "❌ LỖI KHI TẠO ĐƠN HÀNG");
                 throw;
             }
         }
+
+        // ================================================================
+        // CÁC PHƯƠNG THỨC HỖ TRỢ KHÁC (GIỮ NGUYÊN)
+        // ================================================================
 
         public async Task<DonHangDto?> GetByIdAsync(int id)
         {
@@ -330,10 +364,7 @@ namespace quanlybanthuoc.Services.Impl
                 throw new NotFoundException("Không tìm thấy đơn hàng.");
             }
 
-            // TODO: Khi xóa đơn hàng, cần HOÀN LẠI TỒN KHO
-            // Để tránh phức tạp, có thể chỉ soft delete hoặc đánh dấu "đã hủy"
-            // Không implement hard delete cho giao dịch tài chính
-
+            // Không cho phép xóa đơn hàng (chỉ hủy hoặc hoàn trả)
             throw new BadRequestException("Không thể xóa đơn hàng. Vui lòng liên hệ quản trị viên.");
         }
 
