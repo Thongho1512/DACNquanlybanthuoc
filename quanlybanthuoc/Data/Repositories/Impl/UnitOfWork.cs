@@ -14,12 +14,26 @@ namespace quanlybanthuoc.Data.Repositories.Impl
         private NhaCungCapRepository? _nhaCungCapRepository;
         private ChiNhanhRepository? _chiNhanhRepository;
         private KhachHangRepository? _khachHangRepository;
+        private DonHangRepository? _donHangRepository;
+        private ChiTietDonHangRepository? _chiTietDonHangRepository;
+        private PhuongThucThanhToanRepository? _phuongThucThanhToanRepository;
+        private LichSuDiemRepository? _lichSuDiemRepository;
 
         public UnitOfWork(ShopDbContext context)
         {
             _context = context;
         }
 
+        public IPhuongThucThanhToanRepository PhuongThucThanhToanRepository =>
+            _phuongThucThanhToanRepository ??= new PhuongThucThanhToanRepository(_context);
+
+        public ILichSuDiemRepository LichSuDiemRepository =>
+            _lichSuDiemRepository ??= new LichSuDiemRepository(_context);
+        public IDonHangRepository DonHangRepository =>
+            _donHangRepository ??= new DonHangRepository(_context);
+
+        public IChiTietDonHangRepository ChiTietDonHangRepository =>
+            _chiTietDonHangRepository ??= new ChiTietDonHangRepository(_context);
         public IDanhMucRepository DanhMucRepository =>
             _danhMucRepository ??= new DanhMucRepository(_context);
 

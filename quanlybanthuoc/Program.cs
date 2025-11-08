@@ -50,7 +50,10 @@ builder.Services.AddScoped<INhaCungCapRepository, NhaCungCapRepository>();
 builder.Services.AddScoped<IChiNhanhRepository, ChiNhanhRepository>();
 builder.Services.AddScoped<IDanhMucRepository, DanhMucRepository>();
 builder.Services.AddScoped<IKhachHangRepository, KhachHangRepository>();
-
+builder.Services.AddScoped<IDonHangRepository, DonHangRepository>();
+builder.Services.AddScoped<IChiTietDonHangRepository, ChiTietDonHangRepository>();
+builder.Services.AddScoped<IPhuongThucThanhToanRepository, PhuongThucThanhToanRepository>();
+builder.Services.AddScoped<ILichSuDiemRepository, LichSuDiemRepository>();
 
 // Services
 builder.Services.AddScoped<INguoiDungService, NguoiDungService>();
@@ -61,6 +64,9 @@ builder.Services.AddScoped<IDanhMucService, DanhMucService>();
 builder.Services.AddScoped<INhaCungCapService, NhaCungCapService>();
 builder.Services.AddScoped<IChiNhanhService, ChiNhanhService>();
 builder.Services.AddScoped<IKhachHangService, KhachHangService>();
+builder.Services.AddScoped<IDonHangService, DonHangService>();
+builder.Services.AddScoped<IPhuongThucThanhToanService, PhuongThucThanhToanService>();
+
 
 
 // ============================================
