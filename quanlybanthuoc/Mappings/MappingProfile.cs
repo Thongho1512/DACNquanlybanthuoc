@@ -59,16 +59,16 @@ namespace quanlybanthuoc.Mappings
 
             // DonHang mappings
             CreateMap<DonHang, DonHangDto>()
-                .ForMember(dest => dest.TenNguoiDung, opt => opt.MapFrom(src => src.IdnguoiDungNavigation.HoTen))
-                .ForMember(dest => dest.TenKhachHang, opt => opt.MapFrom(src => src.IdkhachHangNavigation.TenKhachHang))
-                .ForMember(dest => dest.TenChiNhanh, opt => opt.MapFrom(src => src.IdchiNhanhNavigation.TenChiNhanh))
-                .ForMember(dest => dest.TenPhuongThucTt, opt => opt.MapFrom(src => src.IdphuongThucTtNavigation.TenPhuongThuc));
+                .ForMember(dest => dest.TenNguoiDung, opt => opt.MapFrom(src => src.IdnguoiDungNavigation != null ? src.IdnguoiDungNavigation.HoTen : null))
+                .ForMember(dest => dest.TenKhachHang, opt => opt.MapFrom(src => src.IdkhachHangNavigation != null ? src.IdkhachHangNavigation.TenKhachHang : null))
+                .ForMember(dest => dest.TenChiNhanh, opt => opt.MapFrom(src => src.IdchiNhanhNavigation != null ? src.IdchiNhanhNavigation.TenChiNhanh : null))
+                .ForMember(dest => dest.TenPhuongThucTt, opt => opt.MapFrom(src => src.IdphuongThucTtNavigation != null ? src.IdphuongThucTtNavigation.TenPhuongThuc : null));
 
             CreateMap<CreateDonHangDto, DonHang>();
 
             // ChiTietDonHang mappings
             CreateMap<ChiTietDonHang, ChiTietDonHangDto>()
-                .ForMember(dest => dest.TenThuoc, opt => opt.MapFrom(src => src.IdthuocNavigation.TenThuoc));
+                .ForMember(dest => dest.TenThuoc, opt => opt.MapFrom(src => src.IdthuocNavigation != null ? src.IdthuocNavigation.TenThuoc : null));
 
             // PhuongThucThanhToan mappings
             CreateMap<PhuongThucThanhToan, PhuongThucThanhToanDto>();
