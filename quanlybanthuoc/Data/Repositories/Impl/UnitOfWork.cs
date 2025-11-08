@@ -6,6 +6,7 @@ namespace quanlybanthuoc.Data.Repositories.Impl
     {
         private readonly ShopDbContext _context;
         private IDbContextTransaction? _transaction;
+        private readonly ILogger<UnitOfWork> _logger;
         private NguoiDungRepository? _nguoiDungRepository;
         private RefreshTokenRepository? _refreshTokenRepository;
         private VaiTroRepository? _vaiTroRepository;
@@ -21,12 +22,16 @@ namespace quanlybanthuoc.Data.Repositories.Impl
         private LoHangRepository? _loHangRepository;
         private KhoHangRepository? _khoHangRepository;
         private DonNhapHangRepository? _donNhapHangRepository;
+        private BaoCaoRepository? _baoCaoRepository;
 
-        public UnitOfWork(ShopDbContext context)
+
+        public UnitOfWork(ShopDbContext context, ILogger<UnitOfWork> logger)
         {
             _context = context;
+            _logger = logger;
         }
-
+        public IBaoCaoRepository BaoCaoRepository =>
+            _baoCaoRepository ??= new BaoCaoRepository(_context, _logger.CreateLogger<BaoCaoRepository>());
         public IDonNhapHangRepository DonNhapHangRepository =>
             _donNhapHangRepository ??= new DonNhapHangRepository(_context);
         public IKhoHangRepository KhoHangRepository =>
