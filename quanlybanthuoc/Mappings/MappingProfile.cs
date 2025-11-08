@@ -4,14 +4,15 @@ using quanlybanthuoc.Data.Entities;
 using quanlybanthuoc.Dtos.ChiNhanh;
 using quanlybanthuoc.Dtos.DanhMuc;
 using quanlybanthuoc.Dtos.DonHang;
+using quanlybanthuoc.Dtos.DonNhapHang;
 using quanlybanthuoc.Dtos.KhachHang;
+using quanlybanthuoc.Dtos.KhoHang;
+using quanlybanthuoc.Dtos.LoHang;
 using quanlybanthuoc.Dtos.NguoiDung;
 using quanlybanthuoc.Dtos.NhaCungCap;
 using quanlybanthuoc.Dtos.PhuongThucThanhToan;
 using quanlybanthuoc.Dtos.Thuoc;
-using quanlybanthuoc.Dtos.LoHang;
-using quanlybanthuoc.Dtos.KhoHang;
-using quanlybanthuoc.Dtos.DonNhapHang;
+using quanlybanthuoc.Dtos.VaiTro;
 
 namespace quanlybanthuoc.Mappings
 {
@@ -24,6 +25,10 @@ namespace quanlybanthuoc.Mappings
             CreateMap<CreateNguoiDungDto, NguoiDung>();
             CreateMap<NguoiDung, NguoiDungDto>();
             CreateMap<UpdateNguoiDungDto, NguoiDung>();
+            //  VaiTro mappings
+            CreateMap<VaiTro, VaiTroDto>();
+            CreateMap<CreateVaiTroDto, VaiTro>();
+            CreateMap<UpdateVaiTroDto, VaiTro>();
 
             // Thuoc mappings
             CreateMap<Thuoc, ThuocDto>()
@@ -70,7 +75,7 @@ namespace quanlybanthuoc.Mappings
             CreateMap<CreatePhuongThucThanhToanDto, PhuongThucThanhToan>();
             CreateMap<UpdatePhuongThucThanhToanDto, PhuongThucThanhToan>();
 
-            // ✅ NEW: LoHang mappings
+            //  LoHang mappings
             CreateMap<LoHang, LoHangDto>()
                 .ForMember(dest => dest.TenThuoc,
                     opt => opt.MapFrom(src => src.IdthuocNavigation != null ? src.IdthuocNavigation.TenThuoc : null))
@@ -80,7 +85,7 @@ namespace quanlybanthuoc.Mappings
             CreateMap<UpdateLoHangDto, LoHang>()
                 .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
 
-            // ✅ NEW: KhoHang mappings
+            // KhoHang mappings
             CreateMap<KhoHang, KhoHangDto>()
                 .ForMember(dest => dest.TenChiNhanh,
                     opt => opt.MapFrom(src => src.IdchiNhanhNavigation != null ? src.IdchiNhanhNavigation.TenChiNhanh : null))
@@ -95,7 +100,7 @@ namespace quanlybanthuoc.Mappings
             CreateMap<UpdateKhoHangDto, KhoHang>()
                 .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
 
-            // ✅ NEW: DonNhapHang mappings
+            // DonNhapHang mappings
             CreateMap<DonNhapHang, DonNhapHangDto>()
                 .ForMember(dest => dest.TenChiNhanh,
                     opt => opt.MapFrom(src => src.IdchiNhanhNavigation != null ? src.IdchiNhanhNavigation.TenChiNhanh : null))

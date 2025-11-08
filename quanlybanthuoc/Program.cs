@@ -72,6 +72,7 @@ builder.Services.AddScoped<IPhuongThucThanhToanService, PhuongThucThanhToanServi
 builder.Services.AddScoped<ILoHangService, LoHangService>();
 builder.Services.AddScoped<IKhoHangService, KhoHangService>();
 builder.Services.AddScoped<IDonNhapHangService, DonNhapHangService>();
+builder.Services.AddScoped<IVaiTroService, VaiTroService>();
 
 
 // ============================================
