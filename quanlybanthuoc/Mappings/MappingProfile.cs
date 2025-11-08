@@ -1,4 +1,5 @@
-﻿using AutoMapper;
+﻿// File: quanlybanthuoc/Mappings/MappingProfile.cs
+using AutoMapper;
 using quanlybanthuoc.Data.Entities;
 using quanlybanthuoc.Dtos.ChiNhanh;
 using quanlybanthuoc.Dtos.DanhMuc;
@@ -7,7 +8,10 @@ using quanlybanthuoc.Dtos.KhachHang;
 using quanlybanthuoc.Dtos.NguoiDung;
 using quanlybanthuoc.Dtos.NhaCungCap;
 using quanlybanthuoc.Dtos.PhuongThucThanhToan;
-using quanlybanthuoc.Dtos.Thuoc; 
+using quanlybanthuoc.Dtos.Thuoc;
+using quanlybanthuoc.Dtos.LoHang;
+using quanlybanthuoc.Dtos.KhoHang;
+using quanlybanthuoc.Dtos.DonNhapHang;
 
 namespace quanlybanthuoc.Mappings
 {
@@ -22,10 +26,11 @@ namespace quanlybanthuoc.Mappings
             CreateMap<UpdateNguoiDungDto, NguoiDung>();
 
             // Thuoc mappings
-            CreateMap<Thuoc, ThuocDto>();
+            CreateMap<Thuoc, ThuocDto>()
+                .ForMember(dest => dest.TenDanhMuc,
+                    opt => opt.MapFrom(src => src.IddanhMucNavigation != null ? src.IddanhMucNavigation.TenDanhMuc : null));
             CreateMap<CreateThuocDto, Thuoc>();
             CreateMap<UpdateThuocDto, Thuoc>();
-
 
             // DanhMuc mappings
             CreateMap<DanhMuc, DanhMucDto>();
@@ -64,6 +69,41 @@ namespace quanlybanthuoc.Mappings
             CreateMap<PhuongThucThanhToan, PhuongThucThanhToanDto>();
             CreateMap<CreatePhuongThucThanhToanDto, PhuongThucThanhToan>();
             CreateMap<UpdatePhuongThucThanhToanDto, PhuongThucThanhToan>();
+
+            // ✅ NEW: LoHang mappings
+            CreateMap<LoHang, LoHangDto>()
+                .ForMember(dest => dest.TenThuoc,
+                    opt => opt.MapFrom(src => src.IdthuocNavigation != null ? src.IdthuocNavigation.TenThuoc : null))
+                .ForMember(dest => dest.SoDonNhap,
+                    opt => opt.MapFrom(src => src.IddonNhapHangNavigation != null ? src.IddonNhapHangNavigation.SoDonNhap : null));
+            CreateMap<CreateLoHangDto, LoHang>();
+            CreateMap<UpdateLoHangDto, LoHang>()
+                .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
+
+            // ✅ NEW: KhoHang mappings
+            CreateMap<KhoHang, KhoHangDto>()
+                .ForMember(dest => dest.TenChiNhanh,
+                    opt => opt.MapFrom(src => src.IdchiNhanhNavigation != null ? src.IdchiNhanhNavigation.TenChiNhanh : null))
+                .ForMember(dest => dest.TenThuoc,
+                    opt => opt.MapFrom(src => src.IdloHangNavigation != null && src.IdloHangNavigation.IdthuocNavigation != null
+                        ? src.IdloHangNavigation.IdthuocNavigation.TenThuoc : null))
+                .ForMember(dest => dest.SoLo,
+                    opt => opt.MapFrom(src => src.IdloHangNavigation != null ? src.IdloHangNavigation.SoLo : null))
+                .ForMember(dest => dest.NgayHetHan,
+                    opt => opt.MapFrom(src => src.IdloHangNavigation != null ? src.IdloHangNavigation.NgayHetHan : null));
+            CreateMap<CreateKhoHangDto, KhoHang>();
+            CreateMap<UpdateKhoHangDto, KhoHang>()
+                .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
+
+            // ✅ NEW: DonNhapHang mappings
+            CreateMap<DonNhapHang, DonNhapHangDto>()
+                .ForMember(dest => dest.TenChiNhanh,
+                    opt => opt.MapFrom(src => src.IdchiNhanhNavigation != null ? src.IdchiNhanhNavigation.TenChiNhanh : null))
+                .ForMember(dest => dest.TenNhaCungCap,
+                    opt => opt.MapFrom(src => src.IdnhaCungCapNavigation != null ? src.IdnhaCungCapNavigation.TenNhaCungCap : null))
+                .ForMember(dest => dest.TenNguoiNhan,
+                    opt => opt.MapFrom(src => src.IdnguoiNhanNavigation != null ? src.IdnguoiNhanNavigation.HoTen : null));
+            CreateMap<CreateDonNhapHangDto, DonNhapHang>();
         }
     }
 }

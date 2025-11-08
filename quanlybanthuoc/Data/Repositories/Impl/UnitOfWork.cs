@@ -18,11 +18,21 @@ namespace quanlybanthuoc.Data.Repositories.Impl
         private ChiTietDonHangRepository? _chiTietDonHangRepository;
         private PhuongThucThanhToanRepository? _phuongThucThanhToanRepository;
         private LichSuDiemRepository? _lichSuDiemRepository;
+        private LoHangRepository? _loHangRepository;
+        private KhoHangRepository? _khoHangRepository;
+        private DonNhapHangRepository? _donNhapHangRepository;
 
         public UnitOfWork(ShopDbContext context)
         {
             _context = context;
         }
+
+        public IDonNhapHangRepository DonNhapHangRepository =>
+            _donNhapHangRepository ??= new DonNhapHangRepository(_context);
+        public IKhoHangRepository KhoHangRepository =>
+            _khoHangRepository ??= new KhoHangRepository(_context);
+        public ILoHangRepository LoHangRepository =>
+            _loHangRepository ??= new LoHangRepository(_context);
 
         public IPhuongThucThanhToanRepository PhuongThucThanhToanRepository =>
             _phuongThucThanhToanRepository ??= new PhuongThucThanhToanRepository(_context);

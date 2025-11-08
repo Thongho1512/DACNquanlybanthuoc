@@ -16,6 +16,10 @@
 
         IPhuongThucThanhToanRepository PhuongThucThanhToanRepository { get; }
         ILichSuDiemRepository LichSuDiemRepository { get; }
+
+        ILoHangRepository LoHangRepository { get; }
+        IKhoHangRepository KhoHangRepository { get; }
+        IDonNhapHangRepository DonNhapHangRepository { get; }
         Task<int> SaveChangesAsync();
         Task BeginTransactionAsync();
         Task CommitTransactionAsync();
