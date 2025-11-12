@@ -36,6 +36,17 @@ builder.Services.AddSwaggerGen();
 // AutoMapper
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 
+// ============================================
+// 🔧 Railway: Lấy Connection String từ biến môi trường
+// ============================================
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? Environment.GetEnvironmentVariable("DATABASE_URL");
+
+if (string.IsNullOrEmpty(connectionString))
+{
+    throw new InvalidOperationException("Database connection string not found!");
+}
+
 // DbContext and Repositories
 builder.Services.AddDbContext<ShopDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -169,6 +180,12 @@ builder.Services.AddTransient<DataInitializer>();
 var app = builder.Build();
 
 app.UseCors("AllowFrontend");
+
+// ============================================
+// Railway: Listen trên PORT từ biến môi trường
+// ============================================
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+app.Urls.Add($"http://0.0.0.0:{port}");
 
 // ============================================
 // 6️⃣ Configure HTTP request pipeline
