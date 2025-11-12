@@ -157,7 +157,7 @@ namespace quanlybanthuoc.Services.Impl
                     TienGiamGia = tienGiamGia,
                     ThanhTien = thanhTien,
                     NgayTao = DateOnly.FromDateTime(DateTime.Now)
-                };
+                }; 
 
                 await _unitOfWork.DonHangRepository.CreateAsync(donHang);
                 await _unitOfWork.SaveChangesAsync();
