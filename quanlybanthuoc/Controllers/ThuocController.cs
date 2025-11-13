@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using quanlybanthuoc.Data.Entities;
 using quanlybanthuoc.Dtos;
 using quanlybanthuoc.Dtos.Thuoc;
 using quanlybanthuoc.Services;
+using System;
 
 namespace quanlybanthuoc.Controllers
 {
@@ -141,6 +143,34 @@ namespace quanlybanthuoc.Controllers
             _logger.LogInformation("Getting medicines with low stock");
             var thuocs = await _thuocService.GetThuocTonKhoThapAsync(idChiNhanh);
             var result = ApiResponse<IEnumerable<ThuocDto>>.SuccessResponse(thuocs);
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Lấy danh sách thuốc theo chi nhánh - TẤT CẢ NGƯỜI DÙNG
+        /// Chỉ lấy các thuốc có tồn kho > 0 tại chi nhánh
+        /// </summary>
+        [HttpGet("by-branch/{idChiNhanh}")]
+        [Authorize(Policy = "AllUsers")]
+        public async Task<IActionResult> GetThuocByChiNhanh(
+            int idChiNhanh,
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] bool active = true,
+            [FromQuery] string? searchTerm = null,
+            [FromQuery] int? idDanhMuc = null)
+        {
+            _logger.LogInformation($"Getting medicines by branch: {idChiNhanh}");
+
+            var result = ApiResponse<PagedResult<ThuocDto>>.SuccessResponse(
+                await _thuocService.GetByChiNhanhIdAsync(
+                    idChiNhanh,
+                    pageNumber,
+                    pageSize,
+                    active,
+                    searchTerm,
+                    idDanhMuc));
+
             return Ok(result);
         }
     }

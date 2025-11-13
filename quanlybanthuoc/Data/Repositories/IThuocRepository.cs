@@ -12,6 +12,15 @@ namespace quanlybanthuoc.Data.Repositories
             string? searchTerm = null,
             int? idDanhMuc = null);
 
+        // THÊM MỚI: Lấy thuốc theo chi nhánh
+        Task<PagedResult<Thuoc>> GetByChiNhanhIdAsync(
+            int idChiNhanh,
+            int pageNumber,
+            int pageSize,
+            bool active,
+            string? searchTerm = null,
+            int? idDanhMuc = null);
+
         Task SoftDeleteAsync(Thuoc entity);
 
         Task<IEnumerable<Thuoc>> GetThuocSapHetHanAsync(int days, int? idChiNhanh = null);

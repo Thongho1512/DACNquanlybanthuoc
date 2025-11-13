@@ -128,5 +128,46 @@ namespace quanlybanthuoc.Services.Impl
 
             return result;
         }
+
+        public async Task<PagedResult<ThuocDto>> GetByChiNhanhIdAsync(
+    int idChiNhanh,
+    int pageNumber,
+    int pageSize,
+    bool active,
+    string? searchTerm = null,
+    int? idDanhMuc = null)
+        {
+            _logger.LogInformation($"Getting medicines by branch id: {idChiNhanh}");
+
+            // Validate chi nhánh tồn tại
+            var chiNhanh = await _unitOfWork.ChiNhanhRepository.GetByIdAsync(idChiNhanh);
+            if (chiNhanh == null || chiNhanh.TrangThai == false)
+            {
+                throw new NotFoundException($"Không tìm thấy chi nhánh với id: {idChiNhanh}");
+            }
+
+            var pagedList = await _unitOfWork.ThuocRepository.GetByChiNhanhIdAsync(
+                idChiNhanh,
+                pageNumber,
+                pageSize,
+                active,
+                searchTerm,
+                idDanhMuc);
+
+            var thuocDtos = pagedList.Items.Select(thuoc =>
+            {
+                var dto = _mapper.Map<ThuocDto>(thuoc);
+                dto.TenDanhMuc = thuoc.IddanhMucNavigation?.TenDanhMuc;
+                return dto;
+            }).ToList();
+
+            return new PagedResult<ThuocDto>
+            {
+                Items = thuocDtos,
+                TotalCount = pagedList.TotalCount,
+                PageNumber = pagedList.PageNumber,
+                PageSize = pagedList.PageSize,
+            };
+        }
     }
 }
