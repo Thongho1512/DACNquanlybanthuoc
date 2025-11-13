@@ -25,20 +25,17 @@ namespace quanlybanthuoc.Data.Repositories.Impl
                     .ThenInclude(kh => kh.IdchiNhanhNavigation)
                 .AsQueryable();
 
-            // Filter by thuoc
             if (idThuoc.HasValue)
             {
                 query = query.Where(lh => lh.Idthuoc == idThuoc.Value);
             }
 
-            // Filter by chi nhánh (through KhoHang)
             if (idChiNhanh.HasValue)
             {
                 query = query.Where(lh =>
                     lh.KhoHangs.Any(kh => kh.IdchiNhanh == idChiNhanh.Value));
             }
 
-            // Filter sắp hết hạn
             if (sapHetHan.HasValue && sapHetHan.Value)
             {
                 var ngayHienTai = DateOnly.FromDateTime(DateTime.Now);
@@ -68,12 +65,22 @@ namespace quanlybanthuoc.Data.Repositories.Impl
             };
         }
 
+        /// <summary>
+        ///  FEFO: Lấy lô hàng theo thuốc, sắp xếp theo HẠN SỬ DỤNG (sớm nhất trước)
+        /// Chỉ lấy các lô còn tồn kho > 0 và chưa hết hạn
+        /// </summary>
         public async Task<IEnumerable<LoHang>> GetByThuocIdAsync(int thuocId)
         {
+            var ngayHienTai = DateOnly.FromDateTime(DateTime.Now);
+
             return await _dbSet
                 .Include(lh => lh.KhoHangs)
-                .Where(lh => lh.Idthuoc == thuocId)
-                .OrderBy(lh => lh.NgayHetHan) // FIFO
+                .Where(lh =>
+                    lh.Idthuoc == thuocId &&
+                    lh.NgayHetHan > ngayHienTai && //  Chỉ lấy lô chưa hết hạn
+                    lh.KhoHangs.Any(kh => kh.SoLuongTon > 0)) //  Chỉ lấy lô còn tồn
+                .OrderBy(lh => lh.NgayHetHan)  //  FEFO: Hết hạn sớm nhất đứng đầu
+                .ThenBy(lh => lh.NgaySanXuat)  //  Nếu cùng HSD thì ưu tiên lô sản xuất sớm hơn
                 .AsNoTracking()
                 .ToListAsync();
         }

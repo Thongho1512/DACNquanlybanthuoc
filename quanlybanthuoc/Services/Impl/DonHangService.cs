@@ -1,5 +1,4 @@
-﻿// File: quanlybanthuoc/Services/Impl/DonHangService.cs (HOÀN CHỈNH)
-using AutoMapper;
+﻿using AutoMapper;
 using quanlybanthuoc.Data.Entities;
 using quanlybanthuoc.Data.Repositories;
 using quanlybanthuoc.Dtos;
@@ -16,7 +15,7 @@ namespace quanlybanthuoc.Services.Impl
         private readonly IKhachHangService _khachHangService;
 
         // ====================================================================
-        // NGHIỆP VỤ ĐIỂM THƯỞNG - CÓ THỂ CHỈNH SỬA
+        // NGHIỆP VỤ ĐIỂM THƯỞNG - CẤU HÌNH TẠI ĐÂY
         // ====================================================================
         private const decimal TY_LE_QUYDO_DIEM_SANG_TIEN = 1000m;  // 1 điểm = 1,000 VNĐ
         private const decimal TY_LE_TICH_DIEM = 10000m;            // 10,000 VNĐ = 1 điểm
@@ -38,20 +37,17 @@ namespace quanlybanthuoc.Services.Impl
 
         public async Task<DonHangDto> CreateAsync(CreateDonHangDto dto, int idNguoiDung)
         {
-            _logger.LogInformation("=== BẮT ĐẦU TẠO ĐỚN HÀNG VỚI TỰ ĐỘNG SỬ DỤNG ĐIỂM ===");
 
             // ================================================================
             // BƯỚC 1: VALIDATE DỮ LIỆU ĐẦU VÀO
             // ================================================================
 
-            // Validate chi nhánh
             var chiNhanh = await _unitOfWork.ChiNhanhRepository.GetByIdAsync(dto.IdchiNhanh);
             if (chiNhanh == null || chiNhanh.TrangThai == false)
             {
                 throw new NotFoundException("Chi nhánh không tồn tại hoặc không hoạt động.");
             }
 
-            // Validate khách hàng (nếu có)
             KhachHang? khachHang = null;
             if (dto.IdkhachHang.HasValue)
             {
@@ -61,10 +57,10 @@ namespace quanlybanthuoc.Services.Impl
                     throw new NotFoundException("Khách hàng không tồn tại.");
                 }
 
-                _logger.LogInformation($"Khách hàng: {khachHang.TenKhachHang} - Điểm hiện tại: {khachHang.DiemTichLuy ?? 0}");
+                _logger.LogInformation($"👤 Khách hàng: {khachHang.TenKhachHang}");
+                _logger.LogInformation($"💎 Điểm hiện có: {khachHang.DiemTichLuy ?? 0} điểm");
             }
 
-            // Validate phương thức thanh toán
             var phuongThucTt = await _unitOfWork.PhuongThucThanhToanRepository.GetByIdAsync(dto.IdphuongThucTt);
             if (phuongThucTt == null || phuongThucTt.TrangThai == false)
             {
@@ -76,15 +72,18 @@ namespace quanlybanthuoc.Services.Impl
             try
             {
                 // ================================================================
-                // BƯỚC 2: TÍNH TOÁN TỔNG TIỀN VÀ TẠO CHI TIẾT ĐƠN HÀNG
+                // BƯỚC 2: TÍNH TỔNG TIỀN VÀ TẠO CHI TIẾT ĐƠN HÀNG
                 // ================================================================
 
                 decimal tongTien = 0;
                 var chiTietList = new List<ChiTietDonHang>();
 
+                _logger.LogInformation("");
+                _logger.LogInformation(" CHI TIẾT SẢN PHẨM:");
+                _logger.LogInformation("─────────────────────────────────────────────────────");
+
                 foreach (var item in dto.ChiTietDonHangs)
                 {
-                    // Validate thuốc
                     var thuoc = await _unitOfWork.ThuocRepository.GetByIdAsync(item.Idthuoc);
                     if (thuoc == null || thuoc.TrangThai == false)
                     {
@@ -93,6 +92,8 @@ namespace quanlybanthuoc.Services.Impl
 
                     var thanhTienItem = item.SoLuong * item.DonGia;
                     tongTien += thanhTienItem;
+
+                    _logger.LogInformation($"  • {thuoc.TenThuoc}: {item.SoLuong} x {item.DonGia:N0} = {thanhTienItem:N0} VNĐ");
 
                     chiTietList.Add(new ChiTietDonHang
                     {
@@ -103,7 +104,9 @@ namespace quanlybanthuoc.Services.Impl
                     });
                 }
 
-                _logger.LogInformation($"Tổng tiền đơn hàng: {tongTien:N0} VNĐ");
+                _logger.LogInformation("─────────────────────────────────────────────────────");
+                _logger.LogInformation($"💰 TỔNG TIỀN: {tongTien:N0} VNĐ");
+                _logger.LogInformation("");
 
                 // ================================================================
                 // BƯỚC 3: TỰ ĐỘNG TÍNH TOÁN VÀ SỬ DỤNG ĐIỂM TÍCH LŨY
@@ -121,24 +124,18 @@ namespace quanlybanthuoc.Services.Impl
                     // Tính số điểm tối đa có thể sử dụng dựa trên giới hạn giảm giá
                     int diemToiDaCoTheSuDung = (int)(tienGiamGiaToiDa / TY_LE_QUYDO_DIEM_SANG_TIEN);
 
-                    // Số điểm thực tế sử dụng = MIN(điểm khách hàng có, điểm tối đa được dùng)
+                    //  HỆ THỐNG TỰ ĐỘNG CHỌN SỐ ĐIỂM TỐI ƯU
                     diemSuDung = Math.Min(diemKhaDungCuaKhachHang, diemToiDaCoTheSuDung);
 
                     // Tính tiền giảm giá từ điểm
                     tienGiamGia = diemSuDung * TY_LE_QUYDO_DIEM_SANG_TIEN;
 
-                    _logger.LogInformation($"╔═══════════════════════════════════════════════════════╗");
-                    _logger.LogInformation($"║          THÔNG TIN SỬ DỤNG ĐIỂM TÍCH LŨY            ║");
-                    _logger.LogInformation($"╠═══════════════════════════════════════════════════════╣");
-                    _logger.LogInformation($"║ Điểm khả dụng:            {diemKhaDungCuaKhachHang,10} điểm          ║");
-                    _logger.LogInformation($"║ Điểm sử dụng:             {diemSuDung,10} điểm          ║");
-                    _logger.LogInformation($"║ Tiền giảm giá:            {tienGiamGia,10:N0} VNĐ        ║");
-                    _logger.LogInformation($"║ Tỷ lệ giảm:               {(tienGiamGia / tongTien) * 100,10:F1}%           ║");
-                    _logger.LogInformation($"╚═══════════════════════════════════════════════════════╝");
                 }
                 else if (khachHang != null)
                 {
-                    _logger.LogInformation($"⚠️  Khách hàng có {diemKhaDungCuaKhachHang} điểm (< {SO_DIEM_TOI_THIEU_SU_DUNG} điểm tối thiểu)");
+                    _logger.LogInformation($"  Khách hàng có {diemKhaDungCuaKhachHang} điểm");
+                    _logger.LogInformation($"   (Cần tối thiểu {SO_DIEM_TOI_THIEU_SU_DUNG} điểm để sử dụng)");
+                    _logger.LogInformation("");
                 }
 
                 decimal thanhTien = tongTien - tienGiamGia;
@@ -157,52 +154,81 @@ namespace quanlybanthuoc.Services.Impl
                     TienGiamGia = tienGiamGia,
                     ThanhTien = thanhTien,
                     NgayTao = DateOnly.FromDateTime(DateTime.Now)
-                }; 
+                };
 
                 await _unitOfWork.DonHangRepository.CreateAsync(donHang);
                 await _unitOfWork.SaveChangesAsync();
 
-                _logger.LogInformation($"✅ Đã tạo đơn hàng ID: {donHang.Id}");
+                _logger.LogInformation($" Đã tạo đơn hàng ID: {donHang.Id}");
 
                 // ================================================================
-                // BƯỚC 5: TẠO CHI TIẾT ĐƠN HÀNG VÀ TRỪ TỒN KHO (FIFO)
+                // BƯỚC 5: XỬ LÝ CHI TIẾT ĐƠN HÀNG VÀ TRỪ TỒN KHO (FEFO)
                 // ================================================================
+
+                _logger.LogInformation("");
+                _logger.LogInformation(" XỬ LÝ TỒN KHO (FEFO - First Expired, First Out):");
+                _logger.LogInformation("─────────────────────────────────────────────────────");
 
                 foreach (var chiTiet in chiTietList)
                 {
                     chiTiet.IddonHang = donHang.Id;
 
                     int soLuongCanTru = chiTiet.SoLuong ?? 0;
+                    var thuoc = await _unitOfWork.ThuocRepository.GetByIdAsync(chiTiet.Idthuoc ?? 0);
+
+                    //  Lấy danh sách lô hàng đã được sắp xếp theo FEFO
+                    // (Hết hạn sớm nhất → muộn nhất)
                     var loHangs = await _unitOfWork.LoHangRepository.GetByThuocIdAsync(chiTiet.Idthuoc ?? 0);
+
+                    if (!loHangs.Any())
+                    {
+                        throw new BadRequestException(
+                            $"Không có lô hàng nào khả dụng cho thuốc '{thuoc?.TenThuoc}'");
+                    }
+
+                    _logger.LogInformation($"  🔍 Xử lý thuốc: {thuoc?.TenThuoc} (Cần: {soLuongCanTru} {thuoc?.DonVi})");
 
                     foreach (var loHang in loHangs)
                     {
-                        if (soLuongCanTru <= 0) break;
+                        if (soLuongCanTru <= 0) break; // Đã đủ số lượng
 
                         var khoHang = await _unitOfWork.KhoHangRepository
                             .GetByChiNhanhAndLoHangAsync(dto.IdchiNhanh, loHang.Id);
 
                         if (khoHang == null || khoHang.SoLuongTon <= 0)
-                            continue;
+                            continue; // Lô này không có tồn tại chi nhánh này
 
+                        // Tính số lượng cần trừ từ lô này
                         int soLuongTruLoNay = Math.Min(soLuongCanTru, khoHang.SoLuongTon ?? 0);
 
+                        // Trừ tồn kho
                         await _unitOfWork.KhoHangRepository.TruTonKhoAsync(
                             dto.IdchiNhanh,
                             loHang.Id,
                             soLuongTruLoNay);
 
-                        _logger.LogInformation($"  → Trừ {soLuongTruLoNay} {chiTiet.IdthuocNavigation?.DonVi} từ lô {loHang.SoLo}");
+                        int soNgayConLai = 0;
+                        if (loHang.NgayHetHan.HasValue)
+                        {
+                            soNgayConLai = (loHang.NgayHetHan.Value.ToDateTime(TimeOnly.MinValue) - DateTime.Now).Days;
+                        }
+
+                        _logger.LogInformation(
+                            $"     Lô {loHang.SoLo} (HSD: {loHang.NgayHetHan:dd/MM/yyyy}, còn {soNgayConLai} ngày): " +
+                            $"Trừ {soLuongTruLoNay} {thuoc?.DonVi}");
 
                         soLuongCanTru -= soLuongTruLoNay;
                     }
 
+                    // Kiểm tra nếu vẫn còn thiếu hàng
                     if (soLuongCanTru > 0)
                     {
                         throw new BadRequestException(
-                            $"Không đủ tồn kho cho thuốc '{chiTiet.IdthuocNavigation?.TenThuoc}'. " +
-                            $"Còn thiếu: {soLuongCanTru} {chiTiet.IdthuocNavigation?.DonVi}");
+                            $" Không đủ tồn kho cho thuốc '{thuoc?.TenThuoc}'. " +
+                            $"Còn thiếu: {soLuongCanTru} {thuoc?.DonVi}");
                     }
+
+                    _logger.LogInformation($"    ✔️ Hoàn tất xử lý thuốc: {thuoc?.TenThuoc}");
                 }
 
                 await _unitOfWork.ChiTietDonHangRepository.CreateRangeAsync(chiTietList);
@@ -215,27 +241,17 @@ namespace quanlybanthuoc.Services.Impl
                 if (khachHang != null)
                 {
                     // Tính điểm được cộng từ đơn hàng này
-                    // Công thức: 10,000 VNĐ = 1 điểm (tính trên thành tiền sau giảm giá)
                     int diemCong = (int)(thanhTien / TY_LE_TICH_DIEM);
 
                     // Cập nhật điểm: Cộng điểm mới, Trừ điểm đã sử dụng
                     await _khachHangService.UpdateDiemTichLuyAsync(
                         khachHang.Id,
-                        diemCong,      // Điểm được cộng
-                        diemSuDung     // Điểm đã sử dụng
+                        diemCong,
+                        diemSuDung
                     );
 
-                    // Tính điểm mới sau giao dịch
                     int diemMoi = (khachHang.DiemTichLuy ?? 0) + diemCong - diemSuDung;
 
-                    _logger.LogInformation($"╔═══════════════════════════════════════════════════════╗");
-                    _logger.LogInformation($"║          CẬP NHẬT ĐIỂM TÍCH LŨY THÀNH CÔNG          ║");
-                    _logger.LogInformation($"╠═══════════════════════════════════════════════════════╣");
-                    _logger.LogInformation($"║ Điểm ban đầu:             {khachHang.DiemTichLuy ?? 0,10} điểm          ║");
-                    _logger.LogInformation($"║ Điểm sử dụng:            -{diemSuDung,10} điểm          ║");
-                    _logger.LogInformation($"║ Điểm được cộng:          +{diemCong,10} điểm          ║");
-                    _logger.LogInformation($"║ Điểm sau giao dịch:       {diemMoi,10} điểm          ║");
-                    _logger.LogInformation($"╚═══════════════════════════════════════════════════════╝");
 
                     // Lưu lịch sử điểm
                     var lichSuDiem = new LichSuDiem
@@ -253,7 +269,7 @@ namespace quanlybanthuoc.Services.Impl
 
                 await _unitOfWork.CommitTransactionAsync();
 
-                _logger.LogInformation("=== HOÀN TẤT TẠO ĐƠN HÀNG THÀNH CÔNG ===");
+                _logger.LogInformation("hoàn tất đơn hàng");
 
                 // Load lại với details để trả về
                 var result = await GetByIdAsync(donHang.Id);
@@ -262,7 +278,7 @@ namespace quanlybanthuoc.Services.Impl
             catch (Exception ex)
             {
                 await _unitOfWork.RollbackTransactionAsync();
-                _logger.LogError(ex, "❌ LỖI KHI TẠO ĐƠN HÀNG");
+                _logger.LogError(ex, " LỖI KHI TẠO ĐƠN HÀNG");
                 throw;
             }
         }
@@ -364,7 +380,6 @@ namespace quanlybanthuoc.Services.Impl
                 throw new NotFoundException("Không tìm thấy đơn hàng.");
             }
 
-            // Không cho phép xóa đơn hàng (chỉ hủy hoặc hoàn trả)
             throw new BadRequestException("Không thể xóa đơn hàng. Vui lòng liên hệ quản trị viên.");
         }
 

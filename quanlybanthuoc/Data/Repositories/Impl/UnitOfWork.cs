@@ -70,7 +70,7 @@ namespace quanlybanthuoc.Data.Repositories.Impl
         public INguoiDungRepository NguoiDungRepository =>
             _nguoiDungRepository ??= new NguoiDungRepository(_context);
 
-        // ✅ THÊM MỚI
+        //  THÊM MỚI
         public IThuocRepository ThuocRepository =>
             _thuocRepository ??= new ThuocRepository(_context);
 

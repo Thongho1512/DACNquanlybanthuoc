@@ -6,7 +6,6 @@
         public int IdchiNhanh { get; set; }
         public int IdphuongThucTt { get; set; }
         public List<ChiTietDonHangItemDto> ChiTietDonHangs { get; set; } = new();
-        public int? DiemSuDung { get; set; } // Điểm tích lũy khách hàng muốn sử dụng
     }
 
     public class ChiTietDonHangItemDto
