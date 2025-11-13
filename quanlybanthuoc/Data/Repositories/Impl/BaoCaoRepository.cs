@@ -33,7 +33,7 @@ namespace quanlybanthuoc.Data.Repositories.Impl
                 .SqlQueryRaw<BaoCaoDoanhThuTheoThangDto>(
                     "EXEC sp_BaoCaoDoanhThuTheoThang @Nam, @Thang, @IDChiNhanh",
                     parameters)
-                .ToListAsync();
+                .ToListAsync(); //  Sửa: Dùng ToListAsync() thay vì để EF compose thêm
 
             return result;
         }
@@ -56,7 +56,7 @@ namespace quanlybanthuoc.Data.Repositories.Impl
                 .SqlQueryRaw<BaoCaoDoanhThuTheoNgayDto>(
                     "EXEC sp_BaoCaoDoanhThuTheoNgay @TuNgay, @DenNgay, @IDChiNhanh",
                     parameters)
-                .ToListAsync();
+                .ToListAsync(); //  Sửa: Dùng ToListAsync()
 
             return result;
         }
@@ -81,7 +81,7 @@ namespace quanlybanthuoc.Data.Repositories.Impl
                 .SqlQueryRaw<ThongKeThuocBanChayDto>(
                     "EXEC sp_ThongKeTopThuocBanChay @Top, @TuNgay, @DenNgay, @IDChiNhanh",
                     parameters)
-                .ToListAsync();
+                .ToListAsync(); //  Sửa: Dùng ToListAsync()
 
             return result;
         }
@@ -92,13 +92,14 @@ namespace quanlybanthuoc.Data.Repositories.Impl
 
             var parameter = new SqlParameter("@IDChiNhanh", (object?)idChiNhanh ?? DBNull.Value);
 
+            //  FIX: Dùng ToListAsync() rồi lấy FirstOrDefault() trên client side
             var result = await _context.Database
                 .SqlQueryRaw<ThongKeDashboardDto>(
                     "EXEC sp_ThongKeDashboard @IDChiNhanh",
                     parameter)
-                .FirstOrDefaultAsync();
+                .ToListAsync();
 
-            return result;
+            return result.FirstOrDefault();
         }
 
         public async Task<IEnumerable<BaoCaoTheoNhanVienDto>> GetBaoCaoTheoNhanVienAsync(
@@ -119,7 +120,7 @@ namespace quanlybanthuoc.Data.Repositories.Impl
                 .SqlQueryRaw<BaoCaoTheoNhanVienDto>(
                     "EXEC sp_BaoCaoTheoNhanVien @TuNgay, @DenNgay, @IDChiNhanh",
                     parameters)
-                .ToListAsync();
+                .ToListAsync(); // Sửa: Dùng ToListAsync()
 
             return result;
         }

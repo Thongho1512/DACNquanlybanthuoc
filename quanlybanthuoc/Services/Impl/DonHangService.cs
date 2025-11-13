@@ -1,4 +1,5 @@
-﻿using AutoMapper;
+﻿// File: quanlybanthuoc/Services/Impl/DonHangService.cs (FIXED VERSION)
+using AutoMapper;
 using quanlybanthuoc.Data.Entities;
 using quanlybanthuoc.Data.Repositories;
 using quanlybanthuoc.Dtos;
@@ -133,7 +134,7 @@ namespace quanlybanthuoc.Services.Impl
                 }
                 else if (khachHang != null)
                 {
-                    _logger.LogInformation($"  Khách hàng có {diemKhaDungCuaKhachHang} điểm");
+                    _logger.LogInformation($" Khách hàng có {diemKhaDungCuaKhachHang} điểm");
                     _logger.LogInformation($"   (Cần tối thiểu {SO_DIEM_TOI_THIEU_SU_DUNG} điểm để sử dụng)");
                     _logger.LogInformation("");
                 }
@@ -166,7 +167,7 @@ namespace quanlybanthuoc.Services.Impl
                 // ================================================================
 
                 _logger.LogInformation("");
-                _logger.LogInformation(" XỬ LÝ TỒN KHO (FEFO - First Expired, First Out):");
+                _logger.LogInformation("📦 XỬ LÝ TỒN KHO (FEFO - First Expired, First Out):");
                 _logger.LogInformation("─────────────────────────────────────────────────────");
 
                 foreach (var chiTiet in chiTietList)
@@ -183,12 +184,25 @@ namespace quanlybanthuoc.Services.Impl
                     if (!loHangs.Any())
                     {
                         throw new BadRequestException(
-                            $"Không có lô hàng nào khả dụng cho thuốc '{thuoc?.TenThuoc}'");
+                            $"❌ Không có lô hàng nào cho thuốc '{thuoc?.TenThuoc}'");
                     }
 
                     _logger.LogInformation($"  🔍 Xử lý thuốc: {thuoc?.TenThuoc} (Cần: {soLuongCanTru} {thuoc?.DonVi})");
 
-                    foreach (var loHang in loHangs)
+                    //  Lọc chỉ lấy các lô có tồn tại chi nhánh này
+                    var loHangsTaiChiNhanh = loHangs
+                        .Where(lh => lh.KhoHangs.Any(kh =>
+                            kh.IdchiNhanh == dto.IdchiNhanh &&
+                            kh.SoLuongTon > 0))
+                        .ToList();
+
+                    if (!loHangsTaiChiNhanh.Any())
+                    {
+                        throw new BadRequestException(
+                            $"❌ Không có tồn kho cho thuốc '{thuoc?.TenThuoc}' tại chi nhánh này");
+                    }
+
+                    foreach (var loHang in loHangsTaiChiNhanh)
                     {
                         if (soLuongCanTru <= 0) break; // Đã đủ số lượng
 
@@ -196,7 +210,7 @@ namespace quanlybanthuoc.Services.Impl
                             .GetByChiNhanhAndLoHangAsync(dto.IdchiNhanh, loHang.Id);
 
                         if (khoHang == null || khoHang.SoLuongTon <= 0)
-                            continue; // Lô này không có tồn tại chi nhánh này
+                            continue; // Skip lô này nếu không có tồn
 
                         // Tính số lượng cần trừ từ lô này
                         int soLuongTruLoNay = Math.Min(soLuongCanTru, khoHang.SoLuongTon ?? 0);
@@ -207,6 +221,7 @@ namespace quanlybanthuoc.Services.Impl
                             loHang.Id,
                             soLuongTruLoNay);
 
+                        // Tính số ngày còn lại đến hết hạn
                         int soNgayConLai = 0;
                         if (loHang.NgayHetHan.HasValue)
                         {
@@ -214,7 +229,7 @@ namespace quanlybanthuoc.Services.Impl
                         }
 
                         _logger.LogInformation(
-                            $"     Lô {loHang.SoLo} (HSD: {loHang.NgayHetHan:dd/MM/yyyy}, còn {soNgayConLai} ngày): " +
+                            $"     Lô {loHang.SoLo} (HSD: {loHang.NgayHetHan?.ToString("dd/MM/yyyy") ?? "N/A"}, còn {soNgayConLai} ngày): " +
                             $"Trừ {soLuongTruLoNay} {thuoc?.DonVi}");
 
                         soLuongCanTru -= soLuongTruLoNay;
@@ -224,7 +239,7 @@ namespace quanlybanthuoc.Services.Impl
                     if (soLuongCanTru > 0)
                     {
                         throw new BadRequestException(
-                            $" Không đủ tồn kho cho thuốc '{thuoc?.TenThuoc}'. " +
+                            $"❌ Không đủ tồn kho cho thuốc '{thuoc?.TenThuoc}'. " +
                             $"Còn thiếu: {soLuongCanTru} {thuoc?.DonVi}");
                     }
 
@@ -269,8 +284,6 @@ namespace quanlybanthuoc.Services.Impl
 
                 await _unitOfWork.CommitTransactionAsync();
 
-                _logger.LogInformation("hoàn tất đơn hàng");
-
                 // Load lại với details để trả về
                 var result = await GetByIdAsync(donHang.Id);
                 return result!;
@@ -278,7 +291,7 @@ namespace quanlybanthuoc.Services.Impl
             catch (Exception ex)
             {
                 await _unitOfWork.RollbackTransactionAsync();
-                _logger.LogError(ex, " LỖI KHI TẠO ĐƠN HÀNG");
+                _logger.LogError(ex, "❌ LỖI KHI TẠO ĐƠN HÀNG");
                 throw;
             }
         }

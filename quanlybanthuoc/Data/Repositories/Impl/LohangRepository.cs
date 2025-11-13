@@ -66,8 +66,8 @@ namespace quanlybanthuoc.Data.Repositories.Impl
         }
 
         /// <summary>
-        ///  FEFO: Lấy lô hàng theo thuốc, sắp xếp theo HẠN SỬ DỤNG (sớm nhất trước)
-        /// Chỉ lấy các lô còn tồn kho > 0 và chưa hết hạn
+        ///  FEFO: Lấy lô hàng theo thuốc và chi nhánh, sắp xếp theo HẠN SỬ DỤNG (sớm nhất trước)
+        /// Chỉ lấy các lô còn tồn kho > 0 tại chi nhánh đó và chưa hết hạn
         /// </summary>
         public async Task<IEnumerable<LoHang>> GetByThuocIdAsync(int thuocId)
         {
@@ -75,10 +75,10 @@ namespace quanlybanthuoc.Data.Repositories.Impl
 
             return await _dbSet
                 .Include(lh => lh.KhoHangs)
+                .Include(lh => lh.IdthuocNavigation)
                 .Where(lh =>
                     lh.Idthuoc == thuocId &&
-                    lh.NgayHetHan > ngayHienTai && //  Chỉ lấy lô chưa hết hạn
-                    lh.KhoHangs.Any(kh => kh.SoLuongTon > 0)) //  Chỉ lấy lô còn tồn
+                    lh.NgayHetHan > ngayHienTai) //  Chỉ lấy lô chưa hết hạn
                 .OrderBy(lh => lh.NgayHetHan)  //  FEFO: Hết hạn sớm nhất đứng đầu
                 .ThenBy(lh => lh.NgaySanXuat)  //  Nếu cùng HSD thì ưu tiên lô sản xuất sớm hơn
                 .AsNoTracking()
