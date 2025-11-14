@@ -1,5 +1,4 @@
-﻿// File: quanlybanthuoc/Services/Impl/DonHangService.cs (FIXED VERSION)
-using AutoMapper;
+﻿using AutoMapper;
 using quanlybanthuoc.Data.Entities;
 using quanlybanthuoc.Data.Repositories;
 using quanlybanthuoc.Dtos;
@@ -435,8 +434,7 @@ namespace quanlybanthuoc.Services.Impl
                         _logger.LogInformation($"   Điểm đã trừ: {diemDaTru}");
 
                         // Hoàn trả điểm: Trừ điểm đã cộng, Cộng lại điểm đã trừ
-                        var khachHang = await _unitOfWork.KhachHangRepository
-                            .GetByIdAsync(donHang.IdkhachHang.Value);
+                        var khachHang = donHang.IdkhachHangNavigation;
 
                         if (khachHang != null)
                         {

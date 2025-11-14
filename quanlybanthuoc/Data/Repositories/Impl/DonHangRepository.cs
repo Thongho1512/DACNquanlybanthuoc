@@ -110,10 +110,15 @@ namespace quanlybanthuoc.Data.Repositories.Impl
                 .ToListAsync();
         }
 
-        public Task DeleteAsync(DonHang entity)
+        /// <summary>
+        /// ✅ FIX: Xóa đơn hàng bằng raw SQL để tránh tracking conflict
+        /// </summary>
+        public async Task DeleteAsync(DonHang entity)
         {
-            _dbSet.Remove(entity);
-            return Task.CompletedTask;
+            // CÁCH 1: Raw SQL (RECOMMENDED - Tránh hoàn toàn tracking conflict)
+            await _context.Database.ExecuteSqlRawAsync(
+                $"DELETE FROM DonHang WHERE ID = {entity.Id}");
+
         }
     }
 }

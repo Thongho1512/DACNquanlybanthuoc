@@ -23,10 +23,15 @@ namespace quanlybanthuoc.Data.Repositories.Impl
             await _dbSet.AddRangeAsync(chiTietDonHangs);
         }
 
-        public Task DeleteRangeAsync(IEnumerable<ChiTietDonHang> chiTietDonHangs)
+        public async Task DeleteRangeAsync(IEnumerable<ChiTietDonHang> chiTietDonHangs)
         {
-            _dbSet.RemoveRange(chiTietDonHangs);
-            return Task.CompletedTask;
+            var ids = chiTietDonHangs.Select(ct => ct.Id).ToList();
+
+            if (ids.Any())
+            {
+                await _context.Database.ExecuteSqlRawAsync(
+                    $"DELETE FROM ChiTietDonHang WHERE ID IN ({string.Join(",", ids)})");
+            }
         }
     }
 }
