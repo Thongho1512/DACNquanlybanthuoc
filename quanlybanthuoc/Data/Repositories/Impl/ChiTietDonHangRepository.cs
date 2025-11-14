@@ -22,5 +22,11 @@ namespace quanlybanthuoc.Data.Repositories.Impl
         {
             await _dbSet.AddRangeAsync(chiTietDonHangs);
         }
+
+        public Task DeleteRangeAsync(IEnumerable<ChiTietDonHang> chiTietDonHangs)
+        {
+            _dbSet.RemoveRange(chiTietDonHangs);
+            return Task.CompletedTask;
+        }
     }
 }

@@ -16,5 +16,6 @@ namespace quanlybanthuoc.Data.Repositories
         Task<DonHang?> GetByIdWithDetailsAsync(int id);
         Task<IEnumerable<DonHang>> GetByKhachHangIdAsync(int khachHangId);
         Task<IEnumerable<DonHang>> GetByChiNhanhIdAsync(int chiNhanhId, DateOnly? tuNgay = null, DateOnly? denNgay = null);
+        Task DeleteAsync(DonHang entity);
     }
 }

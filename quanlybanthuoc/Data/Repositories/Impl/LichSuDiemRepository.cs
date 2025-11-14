@@ -18,5 +18,17 @@ namespace quanlybanthuoc.Data.Repositories.Impl
                 .AsNoTracking()
                 .ToListAsync();
         }
+
+        public async Task<LichSuDiem?> GetByDonHangIdAsync(int donHangId)
+        {
+            return await _dbSet
+                .FirstOrDefaultAsync(ls => ls.IddonHang == donHangId);
+        }
+
+        public Task DeleteAsync(LichSuDiem entity)
+        {
+            _dbSet.Remove(entity);
+            return Task.CompletedTask;
+        }
     }
 }

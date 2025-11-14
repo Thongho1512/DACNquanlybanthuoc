@@ -109,5 +109,11 @@ namespace quanlybanthuoc.Data.Repositories.Impl
                 .AsNoTracking()
                 .ToListAsync();
         }
+
+        public Task DeleteAsync(DonHang entity)
+        {
+            _dbSet.Remove(entity);
+            return Task.CompletedTask;
+        }
     }
 }

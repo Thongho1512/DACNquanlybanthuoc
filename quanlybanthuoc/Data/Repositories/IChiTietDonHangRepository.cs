@@ -6,5 +6,6 @@ namespace quanlybanthuoc.Data.Repositories
     {
         Task<IEnumerable<ChiTietDonHang>> GetByDonHangIdAsync(int donHangId);
         Task CreateRangeAsync(IEnumerable<ChiTietDonHang> chiTietDonHangs);
+        Task DeleteRangeAsync(IEnumerable<ChiTietDonHang> chiTietDonHangs);
     }
 }

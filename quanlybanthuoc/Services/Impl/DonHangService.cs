@@ -184,7 +184,7 @@ namespace quanlybanthuoc.Services.Impl
                     if (!loHangs.Any())
                     {
                         throw new BadRequestException(
-                            $"❌ Không có lô hàng nào cho thuốc '{thuoc?.TenThuoc}'");
+                            $" Không có lô hàng nào cho thuốc '{thuoc?.TenThuoc}'");
                     }
 
                     _logger.LogInformation($"  🔍 Xử lý thuốc: {thuoc?.TenThuoc} (Cần: {soLuongCanTru} {thuoc?.DonVi})");
@@ -199,7 +199,7 @@ namespace quanlybanthuoc.Services.Impl
                     if (!loHangsTaiChiNhanh.Any())
                     {
                         throw new BadRequestException(
-                            $"❌ Không có tồn kho cho thuốc '{thuoc?.TenThuoc}' tại chi nhánh này");
+                            $" Không có tồn kho cho thuốc '{thuoc?.TenThuoc}' tại chi nhánh này");
                     }
 
                     foreach (var loHang in loHangsTaiChiNhanh)
@@ -239,7 +239,7 @@ namespace quanlybanthuoc.Services.Impl
                     if (soLuongCanTru > 0)
                     {
                         throw new BadRequestException(
-                            $"❌ Không đủ tồn kho cho thuốc '{thuoc?.TenThuoc}'. " +
+                            $" Không đủ tồn kho cho thuốc '{thuoc?.TenThuoc}'. " +
                             $"Còn thiếu: {soLuongCanTru} {thuoc?.DonVi}");
                     }
 
@@ -291,7 +291,7 @@ namespace quanlybanthuoc.Services.Impl
             catch (Exception ex)
             {
                 await _unitOfWork.RollbackTransactionAsync();
-                _logger.LogError(ex, "❌ LỖI KHI TẠO ĐƠN HÀNG");
+                _logger.LogError(ex, " LỖI KHI TẠO ĐƠN HÀNG");
                 throw;
             }
         }
@@ -383,17 +383,197 @@ namespace quanlybanthuoc.Services.Impl
             };
         }
 
+        // File: quanlybanthuoc/Services/Impl/DonHangService.cs
+        // CHỈ THAY THẾ METHOD DeleteAsync
+        // Giữ nguyên các method khác trong class
+
         public async Task DeleteAsync(int id)
         {
-            _logger.LogInformation($"Deleting order with id: {id}");
+            _logger.LogInformation($" Bắt đầu xóa đơn hàng ID: {id}");
+            _logger.LogInformation("========================================");
 
-            var donHang = await _unitOfWork.DonHangRepository.GetByIdAsync(id);
+            // ================================================================
+            // BƯỚC 1: LẤY THÔNG TIN ĐƠN HÀNG VỚI CHI TIẾT ĐẦY ĐỦ
+            // ================================================================
+            var donHang = await _unitOfWork.DonHangRepository.GetByIdWithDetailsAsync(id);
             if (donHang == null)
             {
-                throw new NotFoundException("Không tìm thấy đơn hàng.");
+                throw new NotFoundException($"Không tìm thấy đơn hàng với ID: {id}");
             }
 
-            throw new BadRequestException("Không thể xóa đơn hàng. Vui lòng liên hệ quản trị viên.");
+            _logger.LogInformation($" Thông tin đơn hàng:");
+            _logger.LogInformation($"   - Chi nhánh: {donHang.IdchiNhanhNavigation?.TenChiNhanh}");
+            _logger.LogInformation($"   - Khách hàng: {donHang.IdkhachHangNavigation?.TenKhachHang ?? "Khách lẻ"}");
+            _logger.LogInformation($"   - Ngày tạo: {donHang.NgayTao}");
+            _logger.LogInformation($"   - Tổng tiền: {donHang.TongTien:N0} VNĐ");
+            _logger.LogInformation($"   - Giảm giá: {donHang.TienGiamGia:N0} VNĐ");
+            _logger.LogInformation($"   - Thành tiền: {donHang.ThanhTien:N0} VNĐ");
+            _logger.LogInformation($"   - Số sản phẩm: {donHang.ChiTietDonHangs.Count}");
+
+            await _unitOfWork.BeginTransactionAsync();
+
+            try
+            {
+                // ================================================================
+                // BƯỚC 3: XỬ LÝ HOÀN TRẢ ĐIỂM TÍCH LŨY (NẾU CÓ)
+                // ================================================================
+                if (donHang.IdkhachHang.HasValue)
+                {
+                    _logger.LogInformation("");
+                    _logger.LogInformation(" XỬ LÝ ĐIỂM TÍCH LŨY:");
+                    _logger.LogInformation("─────────────────────────────────────");
+
+                    var lichSuDiem = await _unitOfWork.LichSuDiemRepository
+                        .GetByDonHangIdAsync(id);
+
+                    if (lichSuDiem != null)
+                    {
+                        int diemDaCong = lichSuDiem.DiemCong ?? 0;
+                        int diemDaTru = lichSuDiem.DiemTru ?? 0;
+
+                        _logger.LogInformation($"   Điểm đã cộng: {diemDaCong}");
+                        _logger.LogInformation($"   Điểm đã trừ: {diemDaTru}");
+
+                        // Hoàn trả điểm: Trừ điểm đã cộng, Cộng lại điểm đã trừ
+                        var khachHang = await _unitOfWork.KhachHangRepository
+                            .GetByIdAsync(donHang.IdkhachHang.Value);
+
+                        if (khachHang != null)
+                        {
+                            int diemCu = khachHang.DiemTichLuy ?? 0;
+
+                            // Cập nhật điểm: - điểm đã cộng + điểm đã trừ
+                            await _khachHangService.UpdateDiemTichLuyAsync(
+                                khachHang.Id,
+                                diemDaTru,      // Hoàn lại điểm đã sử dụng
+                                diemDaCong      // Trừ điểm đã được cộng
+                            );
+
+                            int diemMoi = diemCu - diemDaCong + diemDaTru;
+
+                            _logger.LogInformation($"   Điểm cũ: {diemCu}");
+                            _logger.LogInformation($"   Điểm mới: {diemMoi}");
+                            _logger.LogInformation($"   (= {diemCu} - {diemDaCong} + {diemDaTru})");
+                        }
+
+                        // Xóa lịch sử điểm
+                        await _unitOfWork.LichSuDiemRepository.DeleteAsync(lichSuDiem);
+                        _logger.LogInformation("    Đã xóa lịch sử điểm");
+                    }
+                    else
+                    {
+                        _logger.LogInformation("    Không có lịch sử điểm cần xử lý");
+                    }
+                }
+
+                // ================================================================
+                // BƯỚC 4: HOÀN TRẢ TỒN KHO (REVERSE FEFO)
+                // ================================================================
+                _logger.LogInformation("");
+                _logger.LogInformation(" HOÀN TRẢ TỒN KHO:");
+                _logger.LogInformation("─────────────────────────────────────");
+
+                if (!donHang.ChiTietDonHangs.Any())
+                {
+                    _logger.LogWarning(" Đơn hàng không có chi tiết sản phẩm");
+                }
+                else
+                {
+                    foreach (var chiTiet in donHang.ChiTietDonHangs)
+                    {
+                        var thuoc = chiTiet.IdthuocNavigation;
+                        int soLuongCanHoanTra = chiTiet.SoLuong ?? 0;
+
+                        _logger.LogInformation($"    Hoàn trả: {thuoc?.TenThuoc}");
+                        _logger.LogInformation($"      Số lượng: {soLuongCanHoanTra} {thuoc?.DonVi}");
+
+                        // Lấy danh sách lô hàng theo FEFO (hết hạn sớm nhất trước)
+                        var loHangs = await _unitOfWork.LoHangRepository
+                            .GetByThuocIdAsync(chiTiet.Idthuoc ?? 0);
+
+                        var loHangsTaiChiNhanh = loHangs
+                            .Where(lh => lh.KhoHangs.Any(kh =>
+                                kh.IdchiNhanh == donHang.IdchiNhanh))
+                            .ToList();
+
+                        if (!loHangsTaiChiNhanh.Any())
+                        {
+                            _logger.LogWarning($"       Không tìm thấy lô hàng tại chi nhánh");
+                            continue;
+                        }
+
+                        // Hoàn trả theo thứ tự FEFO (lô hết hạn sớm nhất trước)
+                        foreach (var loHang in loHangsTaiChiNhanh)
+                        {
+                            if (soLuongCanHoanTra <= 0) break;
+
+                            // Hoàn trả vào kho
+                            try
+                            {
+                                await _unitOfWork.KhoHangRepository.CongTonKhoAsync(
+                                    donHang.IdchiNhanh ?? 0,
+                                    loHang.Id,
+                                    soLuongCanHoanTra
+                                );
+
+                                _logger.LogInformation(
+                                    $"       Lô {loHang.SoLo}: +{soLuongCanHoanTra} {thuoc?.DonVi}");
+
+                                soLuongCanHoanTra = 0; // Hoàn trả xong
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError(
+                                    $"      ❌ Lỗi hoàn trả lô {loHang.SoLo}: {ex.Message}");
+                            }
+                        }
+
+                        if (soLuongCanHoanTra > 0)
+                        {
+                            _logger.LogWarning(
+                                $"       Còn thiếu {soLuongCanHoanTra} {thuoc?.DonVi} chưa hoàn trả");
+                        }
+                    }
+                }
+
+                // ================================================================
+                // BƯỚC 5: XÓA CHI TIẾT ĐƠN HÀNG
+                // ================================================================
+                _logger.LogInformation("");
+                _logger.LogInformation(" XÓA CHI TIẾT ĐƠN HÀNG:");
+                _logger.LogInformation("─────────────────────────────────────");
+
+                if (donHang.ChiTietDonHangs.Any())
+                {
+                    await _unitOfWork.ChiTietDonHangRepository
+                        .DeleteRangeAsync(donHang.ChiTietDonHangs);
+
+                    _logger.LogInformation($"    Đã xóa {donHang.ChiTietDonHangs.Count} chi tiết đơn hàng");
+                }
+
+                // ================================================================
+                // BƯỚC 6: XÓA ĐƠN HÀNG
+                // ================================================================
+                _logger.LogInformation("");
+                _logger.LogInformation(" XÓA ĐƠN HÀNG:");
+                _logger.LogInformation("─────────────────────────────────────");
+
+                await _unitOfWork.DonHangRepository.DeleteAsync(donHang);
+                _logger.LogInformation("    Đã xóa đơn hàng khỏi database");
+
+                // ================================================================
+                // BƯỚC 7: LƯU THAY ĐỔI VÀ COMMIT TRANSACTION
+                // ================================================================
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+
+
+                throw new Exception($"Lỗi khi xóa đơn hàng: {ex.Message}", ex);
+            }
         }
 
         public async Task<IEnumerable<DonHangDto>> GetByKhachHangIdAsync(int khachHangId)

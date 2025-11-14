@@ -15,5 +15,6 @@ namespace quanlybanthuoc.Data.Repositories
         Task<IEnumerable<KhoHang>> GetByChiNhanhIdAsync(int idChiNhanh);
         Task<IEnumerable<KhoHang>> GetTonKhoThapAsync(int? idChiNhanh = null);
         Task TruTonKhoAsync(int idChiNhanh, int idLoHang, int soLuong);
+        Task CongTonKhoAsync(int idChiNhanh, int idLoHang, int soLuong);
     }
 }

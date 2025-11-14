@@ -113,5 +113,21 @@ namespace quanlybanthuoc.Data.Repositories.Impl
 
             await UpdateAsync(khoHang);
         }
+
+        public async Task CongTonKhoAsync(int idChiNhanh, int idLoHang, int soLuong)
+        {
+            var khoHang = await GetByChiNhanhAndLoHangAsync(idChiNhanh, idLoHang);
+
+            if (khoHang == null)
+            {
+                throw new InvalidOperationException(
+                    $"Không tìm thấy kho hàng cho chi nhánh {idChiNhanh} và lô hàng {idLoHang}");
+            }
+
+            khoHang.SoLuongTon += soLuong;
+            khoHang.NgayCapNhat = DateOnly.FromDateTime(DateTime.Now);
+
+            await UpdateAsync(khoHang);
+        }
     }
 }
