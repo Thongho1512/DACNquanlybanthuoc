@@ -382,10 +382,6 @@ namespace quanlybanthuoc.Services.Impl
             };
         }
 
-        // File: quanlybanthuoc/Services/Impl/DonHangService.cs
-        // CHỈ THAY THẾ METHOD DeleteAsync
-        // Giữ nguyên các method khác trong class
-
         public async Task DeleteAsync(int id)
         {
             _logger.LogInformation($" Bắt đầu xóa đơn hàng ID: {id}");
@@ -414,15 +410,17 @@ namespace quanlybanthuoc.Services.Impl
             try
             {
                 // ================================================================
-                // BƯỚC 3: XỬ LÝ HOÀN TRẢ ĐIỂM TÍCH LŨY (NẾU CÓ)
+                // BƯỚC 2: ⭐ XỬ LÝ HOÀN TRẢ ĐIỂM TÍCH LŨY TRƯỚC (QUAN TRỌNG!)
                 // ================================================================
+                LichSuDiem? lichSuDiem = null;
+
                 if (donHang.IdkhachHang.HasValue)
                 {
                     _logger.LogInformation("");
                     _logger.LogInformation(" XỬ LÝ ĐIỂM TÍCH LŨY:");
                     _logger.LogInformation("─────────────────────────────────────");
 
-                    var lichSuDiem = await _unitOfWork.LichSuDiemRepository
+                    lichSuDiem = await _unitOfWork.LichSuDiemRepository
                         .GetByDonHangIdAsync(id);
 
                     if (lichSuDiem != null)
@@ -433,7 +431,7 @@ namespace quanlybanthuoc.Services.Impl
                         _logger.LogInformation($"   Điểm đã cộng: {diemDaCong}");
                         _logger.LogInformation($"   Điểm đã trừ: {diemDaTru}");
 
-                        // Hoàn trả điểm: Trừ điểm đã cộng, Cộng lại điểm đã trừ
+                        // Hoàn trả điểm cho khách hàng
                         var khachHang = donHang.IdkhachHangNavigation;
 
                         if (khachHang != null)
@@ -454,8 +452,9 @@ namespace quanlybanthuoc.Services.Impl
                             _logger.LogInformation($"   (= {diemCu} - {diemDaCong} + {diemDaTru})");
                         }
 
-                        // Xóa lịch sử điểm
+                        // ⭐ XÓA LỊCH SỬ ĐIỂM NGAY SAU KHI CẬP NHẬT
                         await _unitOfWork.LichSuDiemRepository.DeleteAsync(lichSuDiem);
+                        await _unitOfWork.SaveChangesAsync(); // Lưu ngay để tránh conflict
                         _logger.LogInformation("    Đã xóa lịch sử điểm");
                     }
                     else
@@ -465,7 +464,7 @@ namespace quanlybanthuoc.Services.Impl
                 }
 
                 // ================================================================
-                // BƯỚC 4: HOÀN TRẢ TỒN KHO (REVERSE FEFO)
+                // BƯỚC 3: HOÀN TRẢ TỒN KHO (REVERSE FEFO)
                 // ================================================================
                 _logger.LogInformation("");
                 _logger.LogInformation(" HOÀN TRẢ TỒN KHO:");
@@ -535,7 +534,7 @@ namespace quanlybanthuoc.Services.Impl
                 }
 
                 // ================================================================
-                // BƯỚC 5: XÓA CHI TIẾT ĐƠN HÀNG
+                // BƯỚC 4: XÓA CHI TIẾT ĐƠN HÀNG
                 // ================================================================
                 _logger.LogInformation("");
                 _logger.LogInformation(" XÓA CHI TIẾT ĐƠN HÀNG:");
@@ -550,7 +549,7 @@ namespace quanlybanthuoc.Services.Impl
                 }
 
                 // ================================================================
-                // BƯỚC 6: XÓA ĐƠN HÀNG
+                // BƯỚC 5: XÓA ĐƠN HÀNG (SAU CÙNG)
                 // ================================================================
                 _logger.LogInformation("");
                 _logger.LogInformation(" XÓA ĐƠN HÀNG:");
@@ -560,16 +559,19 @@ namespace quanlybanthuoc.Services.Impl
                 _logger.LogInformation("    Đã xóa đơn hàng khỏi database");
 
                 // ================================================================
-                // BƯỚC 7: LƯU THAY ĐỔI VÀ COMMIT TRANSACTION
+                // BƯỚC 6: LƯU THAY ĐỔI VÀ COMMIT TRANSACTION
                 // ================================================================
                 await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransactionAsync();
+
+                _logger.LogInformation("");
+                _logger.LogInformation("✅ XÓA ĐƠN HÀNG THÀNH CÔNG");
+                _logger.LogInformation("========================================");
             }
             catch (Exception ex)
             {
                 await _unitOfWork.RollbackTransactionAsync();
-
-
+                _logger.LogError($"❌ LỖI: {ex.Message}");
                 throw new Exception($"Lỗi khi xóa đơn hàng: {ex.Message}", ex);
             }
         }

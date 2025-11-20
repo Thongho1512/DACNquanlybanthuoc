@@ -14,7 +14,6 @@ public partial class KhoHang
 
     public DateOnly? NgayCapNhat { get; set; }
 
-    public virtual ICollection<ChiTietLoHang> ChiTietLoHangs { get; set; } = new List<ChiTietLoHang>();
 
     public virtual ChiNhanh? IdchiNhanhNavigation { get; set; }
 

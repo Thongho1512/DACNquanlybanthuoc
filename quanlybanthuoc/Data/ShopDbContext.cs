@@ -18,7 +18,6 @@ public partial class ShopDbContext : DbContext
 
     public virtual DbSet<ChiTietDonHang> ChiTietDonHangs { get; set; }
 
-    public virtual DbSet<ChiTietLoHang> ChiTietLoHangs { get; set; }
 
     public virtual DbSet<DanhMuc> DanhMucs { get; set; }
 
@@ -47,9 +46,15 @@ public partial class ShopDbContext : DbContext
     public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseSqlServer("Server=DESKTOP-170JDGQ;Database=quanlybanthuoc;User Id=sa;Password=thaithong123;TrustServerCertificate=True;");
-
+    {
+        // Connection string sẽ được inject từ Program.cs
+        if (!optionsBuilder.IsConfigured)
+        {
+            // Fallback nếu không có DI
+            throw new InvalidOperationException(
+                "DbContext phải được cấu hình với connection string từ appsettings.json");
+        }
+    }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<RefreshToken>(entity =>
@@ -96,20 +101,7 @@ public partial class ShopDbContext : DbContext
                 .HasConstraintName("FK__ChiTietDo__IDThu__5FB337D6");
         });
 
-        modelBuilder.Entity<ChiTietLoHang>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__ChiTietL__3214EC273172057E");
-
-            entity.ToTable("ChiTietLoHang");
-
-            entity.Property(e => e.Id).HasColumnName("ID");
-            entity.Property(e => e.IdchiTietDh).HasColumnName("IDChiTietDH");
-            entity.Property(e => e.IdkhoHang).HasColumnName("IDKhoHang");
-
-            entity.HasOne(d => d.IdkhoHangNavigation).WithMany(p => p.ChiTietLoHangs)
-                .HasForeignKey(d => d.IdkhoHang)
-                .HasConstraintName("FK__ChiTietLo__IDKho__5629CD9C");
-        });
+       
 
         modelBuilder.Entity<DanhMuc>(entity =>
         {

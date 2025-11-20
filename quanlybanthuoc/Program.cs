@@ -150,19 +150,35 @@ builder.Services.AddAuthorization(options =>
 // ============================================
 // 5️⃣ CORS Configuration
 // ============================================
+// ============================================
+// 5️⃣ CORS Configuration - CẬP NHẬT
+// ============================================
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowFrontend",
-        policy => policy
-            .WithOrigins(
-                "https://127.0.0.1:5500",
-                "https://localhost:5500",
-                "http://127.0.0.1:5500",
-                "http://localhost:5500",
-                "https://quanlybanthuoc.vercel.app")
-            .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials());
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy.SetIsOriginAllowed(origin =>
+        {
+            // Cho phép localhost và 127.0.0.1 khi dev
+            if (origin.StartsWith("http://localhost") ||
+                origin.StartsWith("http://127.0.0.1") ||
+                origin.StartsWith("https://localhost") ||
+                origin.StartsWith("https://127.0.0.1"))
+                return true;
+
+            // Cho phép chính domain backend (cần thiết khi frontend gọi từ cùng domain)
+            var host = new Uri(origin).Host;
+            if (host.EndsWith("appofthong.xyz") ||
+                host.EndsWith("vercel.app") ||
+                host.Contains("quanlybanthuoc.vercel.app"))
+                return true;
+
+            return false;
+        })
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials(); // quan trọng nếu dùng cookie hoặc signalR sau này
+    });
 });
 
 // Data initializer
@@ -176,16 +192,17 @@ app.UseCors("AllowFrontend");
 // ============================================
 // 6️⃣ Configure HTTP request pipeline
 // ============================================
-if (app.Environment.IsDevelopment())
+
+app.UseSwagger();
+app.UseSwaggerUI(options =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(options =>
-    {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Quản lý bán thuốc API v1");
-    });
-}
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "Quản lý bán thuốc API v1");
+});
+
 
 app.UseHttpsRedirection();
+
+
 
 // Custom exception middleware
 app.UseMiddleware<ExceptionMiddleware>();
