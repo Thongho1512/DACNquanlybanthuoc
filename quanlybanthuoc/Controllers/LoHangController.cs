@@ -105,5 +105,36 @@ namespace quanlybanthuoc.Controllers
 
             return NoContent();
         }
+
+        /// <summary>
+        /// Tạo lô hàng thủ công - WAREHOUSE_STAFF
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> CreateLoHang(
+            [FromBody] CreateLoHangDto dto,
+            [FromQuery] int idChiNhanh)
+        {
+            _logger.LogInformation("Creating new batch manually");
+
+            var result = ApiResponse<LoHangDto>.SuccessResponse(
+                await _loHangService.CreateAsync(dto, idChiNhanh));
+
+            return CreatedAtAction(nameof(GetLoHangById), new { id = result.Data?.Id }, result);
+        }
+
+        /// <summary>
+        /// Xóa lô hàng - ADMIN, MANAGER
+        /// </summary>
+        [HttpDelete("{id}")]
+        [Authorize(Policy = "AdminOrManager")]
+        public async Task<IActionResult> DeleteLoHang(int id)
+        {
+            _logger.LogInformation($"Deleting batch with id: {id}");
+
+            await _loHangService.DeleteAsync(id);
+
+            var result = ApiResponse<string>.SuccessResponse("Lô hàng đã được xóa thành công.");
+            return Ok(result);
+        }
     }
 }

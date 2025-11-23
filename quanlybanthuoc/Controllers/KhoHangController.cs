@@ -80,5 +80,34 @@ namespace quanlybanthuoc.Controllers
 
             return NoContent();
         }
+
+        /// <summary>
+        /// Tạo kho hàng thủ công - WAREHOUSE_STAFF
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> CreateKhoHang([FromBody] CreateKhoHangDto dto)
+        {
+            _logger.LogInformation("Creating new warehouse stock");
+
+            var result = ApiResponse<KhoHangDto>.SuccessResponse(
+                await _khoHangService.CreateAsync(dto));
+
+            return CreatedAtAction(nameof(GetKhoHangById), new { id = result.Data?.Id }, result);
+        }
+
+        /// <summary>
+        /// Xóa kho hàng - ADMIN, MANAGER
+        /// </summary>
+        [HttpDelete("{id}")]
+        [Authorize(Policy = "AdminOrManager")]
+        public async Task<IActionResult> DeleteKhoHang(int id)
+        {
+            _logger.LogInformation($"Deleting warehouse stock with id: {id}");
+
+            await _khoHangService.DeleteAsync(id);
+
+            var result = ApiResponse<string>.SuccessResponse("Kho hàng đã được xóa thành công.");
+            return Ok(result);
+        }
     }
 }

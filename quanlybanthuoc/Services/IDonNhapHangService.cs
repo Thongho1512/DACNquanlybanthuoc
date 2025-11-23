@@ -14,5 +14,8 @@ namespace quanlybanthuoc.Services
             int? idNhaCungCap = null,
             DateOnly? tuNgay = null,
             DateOnly? denNgay = null);
+
+        Task UpdateAsync(int id, UpdateDonNhapHangDto dto);
+        Task DeleteAsync(int id);
     }
 }

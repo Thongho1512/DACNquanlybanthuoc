@@ -1,4 +1,6 @@
 ﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
+using quanlybanthuoc.Data.Entities;
 using quanlybanthuoc.Data.Repositories;
 using quanlybanthuoc.Dtos;
 using quanlybanthuoc.Dtos.KhoHang;
@@ -119,6 +121,69 @@ namespace quanlybanthuoc.Services.Impl
             khoHang.NgayCapNhat = DateOnly.FromDateTime(DateTime.Now);
 
             await _unitOfWork.KhoHangRepository.UpdateAsync(khoHang);
+            await _unitOfWork.SaveChangesAsync();
+        }
+
+        public async Task<KhoHangDto> CreateAsync(CreateKhoHangDto dto)
+        {
+            _logger.LogInformation("Creating new warehouse stock");
+
+            // Validate chi nhánh
+            var chiNhanh = await _unitOfWork.ChiNhanhRepository.GetByIdAsync(dto.IdchiNhanh);
+            if (chiNhanh == null || chiNhanh.TrangThai == false)
+            {
+                throw new NotFoundException("Chi nhánh không tồn tại hoặc không hoạt động.");
+            }
+
+            // Validate lô hàng
+            var loHang = await _unitOfWork.LoHangRepository.GetByIdAsync(dto.IdloHang);
+            if (loHang == null)
+            {
+                throw new NotFoundException("Lô hàng không tồn tại.");
+            }
+
+            // Kiểm tra đã tồn tại chưa
+            var existing = await _unitOfWork.KhoHangRepository
+                .GetByChiNhanhAndLoHangAsync(dto.IdchiNhanh, dto.IdloHang);
+            if (existing != null)
+            {
+                throw new BadRequestException("Kho hàng cho lô hàng này tại chi nhánh đã tồn tại.");
+            }
+
+            var entity = new KhoHang
+            {
+                IdchiNhanh = dto.IdchiNhanh,
+                IdloHang = dto.IdloHang,
+                TonKhoToiThieu = dto.TonKhoToiThieu,
+                SoLuongTon = dto.SoLuongTon,
+                NgayCapNhat = DateOnly.FromDateTime(DateTime.Now)
+            };
+
+            await _unitOfWork.KhoHangRepository.CreateAsync(entity);
+            await _unitOfWork.SaveChangesAsync();
+
+            var result = _mapper.Map<KhoHangDto>(entity);
+            return result;
+        }
+
+        public async Task DeleteAsync(int id)
+        {
+            _logger.LogInformation($"Deleting warehouse stock with id: {id}");
+
+            var entity = await _unitOfWork.KhoHangRepository.GetByIdAsync(id);
+            if (entity == null)
+            {
+                throw new NotFoundException($"Không tìm thấy kho hàng với id: {id}");
+            }
+
+            // Kiểm tra còn tồn kho không
+            if (entity.SoLuongTon > 0)
+            {
+                throw new BadRequestException(
+                    $"Không thể xóa kho hàng vì còn {entity.SoLuongTon} sản phẩm trong kho.");
+            }
+
+            _unitOfWork.KhoHangRepository.DeleteAsync(entity);
             await _unitOfWork.SaveChangesAsync();
         }
     }

@@ -107,5 +107,20 @@ namespace quanlybanthuoc.Controllers
                 await _donHangService.GetByKhachHangIdAsync(khachHangId));
             return Ok(result);
         }
+
+        /// <summary>
+        /// UC13: Cập nhật đơn hàng - CHỈ ADMIN, MANAGER
+        /// Theo tài liệu: Chỉ cấp quản lý mới được cập nhật hóa đơn
+        /// </summary>
+        [HttpPut("{id}")]
+        [Authorize(Policy = "AdminOrManager")]
+        public async Task<IActionResult> UpdateDonHang(int id, [FromBody] UpdateDonHangDto dto)
+        {
+            _logger.LogInformation($"Updating order with id: {id}");
+
+            await _donHangService.UpdateAsync(id, dto);
+
+            return NoContent();
+        }
     }
 }

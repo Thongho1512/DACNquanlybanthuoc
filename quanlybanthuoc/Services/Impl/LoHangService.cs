@@ -1,4 +1,6 @@
 ﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
+using quanlybanthuoc.Data.Entities;
 using quanlybanthuoc.Data.Repositories;
 using quanlybanthuoc.Dtos;
 using quanlybanthuoc.Dtos.LoHang;
@@ -152,6 +154,133 @@ namespace quanlybanthuoc.Services.Impl
 
             await _unitOfWork.LoHangRepository.UpdateAsync(loHang);
             await _unitOfWork.SaveChangesAsync();
+        }
+
+        public async Task<LoHangDto> CreateAsync(CreateLoHangDto dto, int idChiNhanh)
+        {
+            _logger.LogInformation("Creating new batch manually");
+
+            // Validate chi nhánh
+            var chiNhanh = await _unitOfWork.ChiNhanhRepository.GetByIdAsync(idChiNhanh);
+            if (chiNhanh == null || chiNhanh.TrangThai == false)
+            {
+                throw new NotFoundException("Chi nhánh không tồn tại hoặc không hoạt động.");
+            }
+
+            // Validate thuốc
+            var thuoc = await _unitOfWork.ThuocRepository.GetByIdAsync(dto.Idthuoc);
+            if (thuoc == null || thuoc.TrangThai == false)
+            {
+                throw new NotFoundException("Thuốc không tồn tại.");
+            }
+
+            // Validate ngày hết hạn
+            if (dto.NgayHetHan <= dto.NgaySanXuat)
+            {
+                throw new BadRequestException("Ngày hết hạn phải sau ngày sản xuất.");
+            }
+
+            if (dto.NgayHetHan <= DateOnly.FromDateTime(DateTime.Now))
+            {
+                throw new BadRequestException("Không thể nhập thuốc đã hết hạn.");
+            }
+
+            await _unitOfWork.BeginTransactionAsync();
+
+            try
+            {
+                // Tạo lô hàng
+                var loHang = new LoHang
+                {
+                    IddonNhapHang = null, // Lô hàng thủ công không có đơn nhập hàng
+                    Idthuoc = dto.Idthuoc,
+                    SoLo = dto.SoLo,
+                    NgaySanXuat = dto.NgaySanXuat,
+                    NgayHetHan = dto.NgayHetHan,
+                    SoLuong = dto.SoLuong,
+                    GiaNhap = dto.GiaNhap
+                };
+
+                await _unitOfWork.LoHangRepository.CreateAsync(loHang);
+                await _unitOfWork.SaveChangesAsync();
+
+                // Tạo hoặc cập nhật kho hàng
+                var khoHang = await _unitOfWork.KhoHangRepository
+                    .GetByChiNhanhAndLoHangAsync(idChiNhanh, loHang.Id);
+
+                if (khoHang == null)
+                {
+                    khoHang = new KhoHang
+                    {
+                        IdchiNhanh = idChiNhanh,
+                        IdloHang = loHang.Id,
+                        TonKhoToiThieu = 10,
+                        SoLuongTon = dto.SoLuong,
+                        NgayCapNhat = DateOnly.FromDateTime(DateTime.Now)
+                    };
+                    await _unitOfWork.KhoHangRepository.CreateAsync(khoHang);
+                }
+                else
+                {
+                    await _unitOfWork.KhoHangRepository.CongTonKhoAsync(
+                        idChiNhanh,
+                        loHang.Id,
+                        dto.SoLuong);
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+                var result = _mapper.Map<LoHangDto>(loHang);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "Error creating batch");
+                throw;
+            }
+        }
+
+        public async Task DeleteAsync(int id)
+        {
+            _logger.LogInformation($"Deleting batch with id: {id}");
+
+            var loHang = await _unitOfWork.LoHangRepository.GetByIdAsync(id);
+            if (loHang == null)
+            {
+                throw new NotFoundException($"Không tìm thấy lô hàng với id: {id}");
+            }
+
+            await _unitOfWork.BeginTransactionAsync();
+
+            try
+            {
+                // Kiểm tra và trừ tồn kho trước khi xóa
+                var khoHangs = await _unitOfWork.KhoHangRepository.GetByChiNhanhIdAsync(loHang.IddonNhapHangNavigation?.IdchiNhanh ?? 0);
+                var khoHangOfLoHang = khoHangs.Where(kh => kh.IdloHang == id).ToList();
+
+                foreach (var khoHang in khoHangOfLoHang)
+                {
+                    if (khoHang.SoLuongTon > 0)
+                    {
+                        throw new BadRequestException(
+                            $"Không thể xóa lô hàng vì còn {khoHang.SoLuongTon} sản phẩm trong kho.");
+                    }
+                }
+
+                // Xóa lô hàng
+                _context.LoHangs.Remove(loHang);
+                await _unitOfWork.SaveChangesAsync();
+
+                await _unitOfWork.CommitTransactionAsync();
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "Error deleting batch");
+                throw;
+            }
         }
     }
 }

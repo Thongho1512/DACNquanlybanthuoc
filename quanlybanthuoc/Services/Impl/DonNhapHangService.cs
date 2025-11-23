@@ -234,5 +234,235 @@ namespace quanlybanthuoc.Services.Impl
                 PageSize = pagedList.PageSize,
             };
         }
+
+        public async Task UpdateAsync(int id, UpdateDonNhapHangDto dto)
+        {
+            _logger.LogInformation($"Updating import order with id: {id}");
+
+            var donNhapHang = await _unitOfWork.DonNhapHangRepository.GetByIdWithDetailsAsync(id);
+            if (donNhapHang == null)
+            {
+                throw new NotFoundException($"Không tìm thấy đơn nhập hàng với id: {id}");
+            }
+
+            // Validate nhà cung cấp
+            var nhaCungCap = await _unitOfWork.NhaCungCapRepository.GetByIdAsync(dto.IdnhaCungCap);
+            if (nhaCungCap == null || nhaCungCap.TrangThai == false)
+            {
+                throw new NotFoundException("Nhà cung cấp không tồn tại.");
+            }
+
+            // Validate số đơn nhập không trùng (nếu thay đổi)
+            if (dto.SoDonNhap != donNhapHang.SoDonNhap)
+            {
+                var existing = await _unitOfWork.DonNhapHangRepository.GetBySoDonNhapAsync(dto.SoDonNhap);
+                if (existing != null)
+                {
+                    throw new BadRequestException("Số đơn nhập đã tồn tại.");
+                }
+            }
+
+            await _unitOfWork.BeginTransactionAsync();
+
+            try
+            {
+                decimal tongTien = 0;
+
+                // Cập nhật thông tin đơn nhập hàng
+                donNhapHang.IdnhaCungCap = dto.IdnhaCungCap;
+                donNhapHang.SoDonNhap = dto.SoDonNhap;
+                donNhapHang.NgayNhap = dto.NgayNhap;
+
+                // Xử lý các lô hàng hiện có và mới
+                var currentLoHangIds = donNhapHang.LoHangs.Select(lh => lh.Id).ToList();
+                var updateLoHangIds = dto.LoHangs.Where(lh => lh.Id.HasValue).Select(lh => lh.Id!.Value).ToList();
+
+                // Xóa các lô hàng không còn trong danh sách update
+                var loHangsToDelete = donNhapHang.LoHangs.Where(lh => !updateLoHangIds.Contains(lh.Id)).ToList();
+                foreach (var loHang in loHangsToDelete)
+                {
+                    // Trừ tồn kho trước khi xóa
+                    var khoHangs = loHang.KhoHangs.ToList();
+                    foreach (var khoHang in khoHangs)
+                    {
+                        if (khoHang.SoLuongTon >= loHang.SoLuong)
+                        {
+                            await _unitOfWork.KhoHangRepository.TruTonKhoAsync(
+                                khoHang.IdchiNhanh ?? 0,
+                                loHang.Id,
+                                loHang.SoLuong ?? 0);
+                        }
+                    }
+                }
+
+                // Cập nhật hoặc thêm mới các lô hàng
+                foreach (var loHangDto in dto.LoHangs)
+                {
+                    // Validate thuốc
+                    var thuoc = await _unitOfWork.ThuocRepository.GetByIdAsync(loHangDto.Idthuoc);
+                    if (thuoc == null || thuoc.TrangThai == false)
+                    {
+                        throw new NotFoundException($"Thuốc ID {loHangDto.Idthuoc} không tồn tại.");
+                    }
+
+                    // Validate ngày hết hạn
+                    if (loHangDto.NgayHetHan <= loHangDto.NgaySanXuat)
+                    {
+                        throw new BadRequestException("Ngày hết hạn phải sau ngày sản xuất.");
+                    }
+
+                    var thanhTien = loHangDto.SoLuong * loHangDto.GiaNhap;
+                    tongTien += thanhTien;
+
+                    if (loHangDto.Id.HasValue)
+                    {
+                        // Cập nhật lô hàng hiện có
+                        var loHang = donNhapHang.LoHangs.FirstOrDefault(lh => lh.Id == loHangDto.Id.Value);
+                        if (loHang != null)
+                        {
+                            int soLuongThayDoi = loHangDto.SoLuong - (loHang.SoLuong ?? 0);
+
+                            loHang.Idthuoc = loHangDto.Idthuoc;
+                            loHang.SoLo = loHangDto.SoLo;
+                            loHang.NgaySanXuat = loHangDto.NgaySanXuat;
+                            loHang.NgayHetHan = loHangDto.NgayHetHan;
+                            loHang.SoLuong = loHangDto.SoLuong;
+                            loHang.GiaNhap = loHangDto.GiaNhap;
+
+                            await _unitOfWork.LoHangRepository.UpdateAsync(loHang);
+
+                            // Cập nhật tồn kho
+                            if (soLuongThayDoi != 0)
+                            {
+                                var khoHang = await _unitOfWork.KhoHangRepository
+                                    .GetByChiNhanhAndLoHangAsync(donNhapHang.IdchiNhanh ?? 0, loHang.Id);
+
+                                if (khoHang != null)
+                                {
+                                    if (soLuongThayDoi > 0)
+                                    {
+                                        await _unitOfWork.KhoHangRepository.CongTonKhoAsync(
+                                            donNhapHang.IdchiNhanh ?? 0,
+                                            loHang.Id,
+                                            soLuongThayDoi);
+                                    }
+                                    else
+                                    {
+                                        await _unitOfWork.KhoHangRepository.TruTonKhoAsync(
+                                            donNhapHang.IdchiNhanh ?? 0,
+                                            loHang.Id,
+                                            Math.Abs(soLuongThayDoi));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Thêm mới lô hàng
+                        var loHangMoi = new LoHang
+                        {
+                            IddonNhapHang = donNhapHang.Id,
+                            Idthuoc = loHangDto.Idthuoc,
+                            SoLo = loHangDto.SoLo,
+                            NgaySanXuat = loHangDto.NgaySanXuat,
+                            NgayHetHan = loHangDto.NgayHetHan,
+                            SoLuong = loHangDto.SoLuong,
+                            GiaNhap = loHangDto.GiaNhap
+                        };
+
+                        await _unitOfWork.LoHangRepository.CreateAsync(loHangMoi);
+                        await _unitOfWork.SaveChangesAsync();
+
+                        // Tạo hoặc cập nhật kho hàng
+                        var khoHang = await _unitOfWork.KhoHangRepository
+                            .GetByChiNhanhAndLoHangAsync(donNhapHang.IdchiNhanh ?? 0, loHangMoi.Id);
+
+                        if (khoHang == null)
+                        {
+                            khoHang = new KhoHang
+                            {
+                                IdchiNhanh = donNhapHang.IdchiNhanh,
+                                IdloHang = loHangMoi.Id,
+                                TonKhoToiThieu = 10,
+                                SoLuongTon = loHangDto.SoLuong,
+                                NgayCapNhat = DateOnly.FromDateTime(DateTime.Now)
+                            };
+                            await _unitOfWork.KhoHangRepository.CreateAsync(khoHang);
+                        }
+                        else
+                        {
+                            await _unitOfWork.KhoHangRepository.CongTonKhoAsync(
+                                donNhapHang.IdchiNhanh ?? 0,
+                                loHangMoi.Id,
+                                loHangDto.SoLuong);
+                        }
+                    }
+                }
+
+                // Cập nhật tổng tiền
+                donNhapHang.TongTien = tongTien;
+                await _unitOfWork.DonNhapHangRepository.UpdateAsync(donNhapHang);
+                await _unitOfWork.SaveChangesAsync();
+
+                await _unitOfWork.CommitTransactionAsync();
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "Error updating import order");
+                throw;
+            }
+        }
+
+        public async Task DeleteAsync(int id)
+        {
+            _logger.LogInformation($"Deleting import order with id: {id}");
+
+            var donNhapHang = await _unitOfWork.DonNhapHangRepository.GetByIdWithDetailsAsync(id);
+            if (donNhapHang == null)
+            {
+                throw new NotFoundException($"Không tìm thấy đơn nhập hàng với id: {id}");
+            }
+
+            await _unitOfWork.BeginTransactionAsync();
+
+            try
+            {
+                // Trừ tồn kho và xóa các lô hàng
+                foreach (var loHang in donNhapHang.LoHangs)
+                {
+                    // Trừ tồn kho
+                    var khoHangs = loHang.KhoHangs.ToList();
+                    foreach (var khoHang in khoHangs)
+                    {
+                        if (khoHang.SoLuongTon >= loHang.SoLuong)
+                        {
+                            await _unitOfWork.KhoHangRepository.TruTonKhoAsync(
+                                khoHang.IdchiNhanh ?? 0,
+                                loHang.Id,
+                                loHang.SoLuong ?? 0);
+                        }
+                        else
+                        {
+                            throw new BadRequestException(
+                                $"Không thể xóa đơn nhập hàng vì lô {loHang.SoLo} đã được sử dụng.");
+                        }
+                    }
+                }
+
+                // Xóa đơn nhập hàng (cascade sẽ xóa các lô hàng)
+                await _unitOfWork.DonNhapHangRepository.DeleteAsync(donNhapHang);
+                await _unitOfWork.SaveChangesAsync();
+
+                await _unitOfWork.CommitTransactionAsync();
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "Error deleting import order");
+                throw;
+            }
+        }
     }
 }

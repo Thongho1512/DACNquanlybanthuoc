@@ -84,5 +84,33 @@ namespace quanlybanthuoc.Controllers
 
             return Ok(result);
         }
+
+        /// <summary>
+        /// Cập nhật đơn nhập hàng - WAREHOUSE_STAFF
+        /// </summary>
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateDonNhapHang(int id, [FromBody] UpdateDonNhapHangDto dto)
+        {
+            _logger.LogInformation($"Updating import order with id: {id}");
+
+            await _donNhapHangService.UpdateAsync(id, dto);
+
+            return NoContent();
+        }
+
+        /// <summary>
+        /// Xóa đơn nhập hàng - ADMIN, MANAGER
+        /// </summary>
+        [HttpDelete("{id}")]
+        [Authorize(Policy = "AdminOrManager")]
+        public async Task<IActionResult> DeleteDonNhapHang(int id)
+        {
+            _logger.LogInformation($"Deleting import order with id: {id}");
+
+            await _donNhapHangService.DeleteAsync(id);
+
+            var result = ApiResponse<string>.SuccessResponse("Đơn nhập hàng đã được xóa thành công.");
+            return Ok(result);
+        }
     }
 }

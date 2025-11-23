@@ -605,5 +605,213 @@ namespace quanlybanthuoc.Services.Impl
 
             return result;
         }
+
+        public async Task UpdateAsync(int id, UpdateDonHangDto dto)
+        {
+            _logger.LogInformation($"Updating order with id: {id}");
+
+            var donHang = await _unitOfWork.DonHangRepository.GetByIdWithDetailsAsync(id);
+            if (donHang == null)
+            {
+                throw new NotFoundException($"Không tìm thấy đơn hàng với id: {id}");
+            }
+
+            // Validate khách hàng nếu có
+            KhachHang? khachHang = null;
+            if (dto.IdkhachHang.HasValue)
+            {
+                khachHang = await _unitOfWork.KhachHangRepository.GetByIdAsync(dto.IdkhachHang.Value);
+                if (khachHang == null || khachHang.TrangThai == false)
+                {
+                    throw new NotFoundException("Khách hàng không tồn tại.");
+                }
+            }
+
+            // Validate phương thức thanh toán
+            var phuongThucTt = await _unitOfWork.PhuongThucThanhToanRepository.GetByIdAsync(dto.IdphuongThucTt);
+            if (phuongThucTt == null || phuongThucTt.TrangThai == false)
+            {
+                throw new NotFoundException("Phương thức thanh toán không hợp lệ.");
+            }
+
+            await _unitOfWork.BeginTransactionAsync();
+
+            try
+            {
+                // Hoàn trả tồn kho của đơn hàng cũ
+                foreach (var chiTietCu in donHang.ChiTietDonHangs)
+                {
+                    var thuoc = chiTietCu.IdthuocNavigation;
+                    int soLuongCanHoanTra = chiTietCu.SoLuong ?? 0;
+
+                    var loHangs = await _unitOfWork.LoHangRepository.GetByThuocIdAsync(chiTietCu.Idthuoc ?? 0);
+                    var loHangsTaiChiNhanh = loHangs
+                        .Where(lh => lh.KhoHangs.Any(kh => kh.IdchiNhanh == donHang.IdchiNhanh))
+                        .ToList();
+
+                    foreach (var loHang in loHangsTaiChiNhanh)
+                    {
+                        if (soLuongCanHoanTra <= 0) break;
+
+                        await _unitOfWork.KhoHangRepository.CongTonKhoAsync(
+                            donHang.IdchiNhanh ?? 0,
+                            loHang.Id,
+                            soLuongCanHoanTra);
+
+                        soLuongCanHoanTra = 0;
+                    }
+                }
+
+                // Hoàn trả điểm tích lũy cũ
+                if (donHang.IdkhachHang.HasValue)
+                {
+                    var lichSuDiem = await _unitOfWork.LichSuDiemRepository.GetByDonHangIdAsync(id);
+                    if (lichSuDiem != null)
+                    {
+                        await _khachHangService.UpdateDiemTichLuyAsync(
+                            donHang.IdkhachHang.Value,
+                            lichSuDiem.DiemTru ?? 0,
+                            lichSuDiem.DiemCong ?? 0);
+
+                        await _unitOfWork.LichSuDiemRepository.DeleteAsync(lichSuDiem);
+                    }
+                }
+
+                // Xóa chi tiết đơn hàng cũ
+                await _unitOfWork.ChiTietDonHangRepository.DeleteRangeAsync(donHang.ChiTietDonHangs);
+                await _unitOfWork.SaveChangesAsync();
+
+                // Tính toán lại đơn hàng mới
+                decimal tongTien = 0;
+                var chiTietList = new List<ChiTietDonHang>();
+
+                foreach (var item in dto.ChiTietDonHangs)
+                {
+                    var thuoc = await _unitOfWork.ThuocRepository.GetByIdAsync(item.Idthuoc);
+                    if (thuoc == null || thuoc.TrangThai == false)
+                    {
+                        throw new NotFoundException($"Thuốc ID {item.Idthuoc} không tồn tại.");
+                    }
+
+                    var thanhTienItem = item.SoLuong * item.DonGia;
+                    tongTien += thanhTienItem;
+
+                    chiTietList.Add(new ChiTietDonHang
+                    {
+                        IddonHang = donHang.Id,
+                        Idthuoc = item.Idthuoc,
+                        SoLuong = item.SoLuong,
+                        DonGia = item.DonGia,
+                        ThanhTien = thanhTienItem
+                    });
+                }
+
+                // Tính điểm và giảm giá mới
+                decimal tienGiamGia = 0;
+                int diemSuDung = 0;
+                int diemKhaDungCuaKhachHang = khachHang?.DiemTichLuy ?? 0;
+
+                if (khachHang != null && diemKhaDungCuaKhachHang >= SO_DIEM_TOI_THIEU_SU_DUNG)
+                {
+                    decimal tienGiamGiaToiDa = tongTien * TY_LE_GIAM_GIA_TOI_DA;
+                    int diemToiDaCoTheSuDung = (int)(tienGiamGiaToiDa / TY_LE_QUYDO_DIEM_SANG_TIEN);
+                    diemSuDung = Math.Min(diemKhaDungCuaKhachHang, diemToiDaCoTheSuDung);
+                    tienGiamGia = diemSuDung * TY_LE_QUYDO_DIEM_SANG_TIEN;
+                }
+
+                decimal thanhTien = tongTien - tienGiamGia;
+
+                // Cập nhật thông tin đơn hàng
+                donHang.IdkhachHang = dto.IdkhachHang;
+                donHang.IdphuongThucTt = dto.IdphuongThucTt;
+                donHang.TongTien = tongTien;
+                donHang.TienGiamGia = tienGiamGia;
+                donHang.ThanhTien = thanhTien;
+
+                await _unitOfWork.DonHangRepository.UpdateAsync(donHang);
+
+                // Thêm chi tiết đơn hàng mới
+                await _unitOfWork.ChiTietDonHangRepository.CreateRangeAsync(chiTietList);
+
+                // Trừ tồn kho mới (FEFO)
+                foreach (var chiTiet in chiTietList)
+                {
+                    int soLuongCanTru = chiTiet.SoLuong ?? 0;
+                    var loHangs = await _unitOfWork.LoHangRepository.GetByThuocIdAsync(chiTiet.Idthuoc ?? 0);
+
+                    var loHangsTaiChiNhanh = loHangs
+                        .Where(lh => lh.KhoHangs.Any(kh =>
+                            kh.IdchiNhanh == donHang.IdchiNhanh &&
+                            kh.SoLuongTon > 0))
+                        .ToList();
+
+                    if (!loHangsTaiChiNhanh.Any())
+                    {
+                        throw new BadRequestException(
+                            $"Không có tồn kho cho thuốc ID {chiTiet.Idthuoc} tại chi nhánh này");
+                    }
+
+                    foreach (var loHang in loHangsTaiChiNhanh)
+                    {
+                        if (soLuongCanTru <= 0) break;
+
+                        var khoHang = await _unitOfWork.KhoHangRepository
+                            .GetByChiNhanhAndLoHangAsync(donHang.IdchiNhanh ?? 0, loHang.Id);
+
+                        if (khoHang == null || khoHang.SoLuongTon <= 0)
+                            continue;
+
+                        int soLuongTruLoNay = Math.Min(soLuongCanTru, khoHang.SoLuongTon ?? 0);
+
+                        await _unitOfWork.KhoHangRepository.TruTonKhoAsync(
+                            donHang.IdchiNhanh ?? 0,
+                            loHang.Id,
+                            soLuongTruLoNay);
+
+                        soLuongCanTru -= soLuongTruLoNay;
+                    }
+
+                    if (soLuongCanTru > 0)
+                    {
+                        throw new BadRequestException(
+                            $"Không đủ tồn kho cho thuốc ID {chiTiet.Idthuoc}. " +
+                            $"Còn thiếu: {soLuongCanTru}");
+                    }
+                }
+
+                // Cập nhật điểm tích lũy mới
+                if (khachHang != null)
+                {
+                    int diemCong = (int)(thanhTien / TY_LE_TICH_DIEM);
+
+                    await _khachHangService.UpdateDiemTichLuyAsync(
+                        khachHang.Id,
+                        diemCong,
+                        diemSuDung);
+
+                    var lichSuDiem = new LichSuDiem
+                    {
+                        IdkhachHang = khachHang.Id,
+                        IddonHang = donHang.Id,
+                        DiemCong = diemCong,
+                        DiemTru = diemSuDung,
+                        NgayGiaoDich = DateOnly.FromDateTime(DateTime.Now)
+                    };
+
+                    await _unitOfWork.LichSuDiemRepository.CreateAsync(lichSuDiem);
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+                _logger.LogInformation($"Order {id} updated successfully");
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "Error updating order");
+                throw;
+            }
+        }
     }
 }

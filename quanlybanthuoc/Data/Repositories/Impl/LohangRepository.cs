@@ -99,5 +99,10 @@ namespace quanlybanthuoc.Data.Repositories.Impl
             return await _dbSet
                 .FirstOrDefaultAsync(lh => lh.SoLo == soLo);
         }
+
+        public async Task DeleteAsync(LoHang entity)
+        {
+            _dbSet.Remove(entity);
+        }
     }
 }

@@ -16,5 +16,6 @@ namespace quanlybanthuoc.Services
             DateOnly? denNgay = null);
         Task DeleteAsync(int id);
         Task<IEnumerable<DonHangDto>> GetByKhachHangIdAsync(int khachHangId);
+        Task UpdateAsync(int id, UpdateDonHangDto dto);
     }
 }

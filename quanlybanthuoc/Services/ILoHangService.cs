@@ -16,5 +16,7 @@ namespace quanlybanthuoc.Services
         Task<IEnumerable<LoHangDto>> GetByThuocIdAsync(int thuocId);
         Task<IEnumerable<LoHangDto>> GetLoHangSapHetHanAsync(int days, int? idChiNhanh = null);
         Task UpdateAsync(int id, UpdateLoHangDto dto);
+        Task<LoHangDto> CreateAsync(CreateLoHangDto dto, int idChiNhanh);
+        Task DeleteAsync(int id);
     }
 }

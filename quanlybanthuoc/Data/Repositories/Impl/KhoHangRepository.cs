@@ -129,5 +129,10 @@ namespace quanlybanthuoc.Data.Repositories.Impl
 
             await UpdateAsync(khoHang);
         }
+
+        public async Task DeleteAsync(KhoHang entity)
+        {
+            _dbSet.Remove(entity);
+        }
     }
 }

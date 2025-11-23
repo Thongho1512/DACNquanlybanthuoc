@@ -13,5 +13,8 @@ namespace quanlybanthuoc.Services
             bool? tonKhoThap = null);
         Task<IEnumerable<KhoHangDto>> GetTonKhoThapAsync(int? idChiNhanh = null);
         Task UpdateAsync(int id, UpdateKhoHangDto dto);
+
+        Task<KhoHangDto> CreateAsync(CreateKhoHangDto dto);
+        Task DeleteAsync(int id);
     }
 }
