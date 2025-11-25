@@ -270,7 +270,7 @@ namespace quanlybanthuoc.Services.Impl
                 }
 
                 // Xóa lô hàng
-                _context.LoHangs.Remove(loHang);
+                _unitOfWork.LoHangRepository.DeleteAsync(loHang);
                 await _unitOfWork.SaveChangesAsync();
 
                 await _unitOfWork.CommitTransactionAsync();
