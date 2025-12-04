@@ -1,4 +1,7 @@
-﻿namespace quanlybanthuoc.Data.Entities;
+﻿using System;
+using System.Collections.Generic;
+
+namespace quanlybanthuoc.Data.Entities;
 
 public partial class ChiNhanh
 {
@@ -17,4 +20,6 @@ public partial class ChiNhanh
     public virtual ICollection<KhoHang> KhoHangs { get; set; } = new List<KhoHang>();
 
     public virtual ICollection<NguoiDung> NguoiDungs { get; set; } = new List<NguoiDung>();
+
+    public virtual ICollection<NguoiGiaoHang> NguoiGiaoHangs { get; set; } = new List<NguoiGiaoHang>();
 }

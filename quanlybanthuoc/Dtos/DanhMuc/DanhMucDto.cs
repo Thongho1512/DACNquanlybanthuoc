@@ -5,5 +5,6 @@
         public int Id { get; set; }
         public string? TenDanhMuc { get; set; }
         public string? MoTa { get; set; }
+        public bool? TrangThai { get; set; }
     }
 }

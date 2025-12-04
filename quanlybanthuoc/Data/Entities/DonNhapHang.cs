@@ -1,4 +1,7 @@
-﻿namespace quanlybanthuoc.Data.Entities;
+﻿using System;
+using System.Collections.Generic;
+
+namespace quanlybanthuoc.Data.Entities;
 
 public partial class DonNhapHang
 {

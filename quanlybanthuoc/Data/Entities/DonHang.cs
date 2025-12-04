@@ -1,4 +1,7 @@
-﻿namespace quanlybanthuoc.Data.Entities;
+﻿using System;
+using System.Collections.Generic;
+
+namespace quanlybanthuoc.Data.Entities;
 
 public partial class DonHang
 {
@@ -20,7 +23,11 @@ public partial class DonHang
 
     public DateOnly? NgayTao { get; set; }
 
+    public string? LoaiDonHang { get; set; }
+
     public virtual ICollection<ChiTietDonHang> ChiTietDonHangs { get; set; } = new List<ChiTietDonHang>();
+
+    public virtual ICollection<DonGiaoHang> DonGiaoHangs { get; set; } = new List<DonGiaoHang>();
 
     public virtual ChiNhanh? IdchiNhanhNavigation { get; set; }
 

@@ -1,4 +1,7 @@
-﻿namespace quanlybanthuoc.Data.Entities;
+﻿using System;
+using System.Collections.Generic;
+
+namespace quanlybanthuoc.Data.Entities;
 
 public partial class KhoHang
 {
@@ -13,7 +16,6 @@ public partial class KhoHang
     public int? SoLuongTon { get; set; }
 
     public DateOnly? NgayCapNhat { get; set; }
-
 
     public virtual ChiNhanh? IdchiNhanhNavigation { get; set; }
 

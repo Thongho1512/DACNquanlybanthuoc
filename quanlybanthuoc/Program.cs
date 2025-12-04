@@ -77,6 +77,7 @@ builder.Services.AddScoped<IKhoHangService, KhoHangService>();
 builder.Services.AddScoped<IDonNhapHangService, DonNhapHangService>();
 builder.Services.AddScoped<IVaiTroService, VaiTroService>();
 builder.Services.AddScoped<IBaoCaoService, BaoCaoService>();
+builder.Services.AddScoped<ICustomerPageService, CustomerPageService>();
 
 
 // ============================================
