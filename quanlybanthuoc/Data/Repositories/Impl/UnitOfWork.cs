@@ -23,6 +23,7 @@ namespace quanlybanthuoc.Data.Repositories.Impl
         private KhoHangRepository? _khoHangRepository;
         private DonNhapHangRepository? _donNhapHangRepository;
         private BaoCaoRepository? _baoCaoRepository;
+        private DonGiaoHangRepository? _donGiaoHangRepository;
 
 
         public UnitOfWork(ShopDbContext context, ILoggerFactory loggerFactory)
@@ -32,6 +33,8 @@ namespace quanlybanthuoc.Data.Repositories.Impl
         }
         public IBaoCaoRepository BaoCaoRepository =>
             _baoCaoRepository ??= new BaoCaoRepository(_context, _loggerFactory.CreateLogger<BaoCaoRepository>());
+        public IDonGiaoHangRepository DonGiaoHangRepository =>
+            _donGiaoHangRepository ??= new DonGiaoHangRepository(_context);
         public IDonNhapHangRepository DonNhapHangRepository =>
             _donNhapHangRepository ??= new DonNhapHangRepository(_context);
         public IKhoHangRepository KhoHangRepository =>

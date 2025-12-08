@@ -6,6 +6,7 @@ namespace quanlybanthuoc.Services
     public interface IDonHangService
     {
         Task<DonHangDto> CreateAsync(CreateDonHangDto dto, int idNguoiDung);
+        Task<DonHangDto> CreateCustomerOrderAsync(CreateCustomerOrderDto dto, int? idKhachHang = null);
         Task<DonHangDto?> GetByIdAsync(int id);
         Task<PagedResult<DonHangDto>> GetAllAsync(
             int pageNumber,

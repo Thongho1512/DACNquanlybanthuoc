@@ -67,6 +67,18 @@ namespace quanlybanthuoc.Services.Impl
                 throw new NotFoundException("Phương thức thanh toán không hợp lệ.");
             }
 
+            // Xác định trạng thái thanh toán dựa trên phương thức thanh toán
+            string trangThaiThanhToan = "PENDING_PAYMENT";
+            
+            // Nếu là tiền mặt, có thể set là PAID_ON_DELIVERY hoặc PAID tùy chính sách
+            if (phuongThucTt.TenPhuongThuc?.ToUpper().Contains("TIỀN MẶT") == true ||
+                phuongThucTt.TenPhuongThuc?.ToUpper().Contains("CASH") == true)
+            {
+                // Với tiền mặt, set là PAID_ON_DELIVERY (sẽ thanh toán khi nhận hàng)
+                // Hoặc có thể set là "PAID" nếu thanh toán ngay tại chỗ
+                trangThaiThanhToan = "PAID_ON_DELIVERY";
+            }
+
             await _unitOfWork.BeginTransactionAsync();
 
             try
@@ -153,7 +165,9 @@ namespace quanlybanthuoc.Services.Impl
                     TongTien = tongTien,
                     TienGiamGia = tienGiamGia,
                     ThanhTien = thanhTien,
-                    NgayTao = DateOnly.FromDateTime(DateTime.Now)
+                    NgayTao = DateOnly.FromDateTime(DateTime.Now),
+                    TrangThaiThanhToan = trangThaiThanhToan,
+                    LoaiDonHang = dto.LoaiDonHang ?? "TAI_CHO"
                 };
 
                 await _unitOfWork.DonHangRepository.CreateAsync(donHang);
@@ -295,6 +309,305 @@ namespace quanlybanthuoc.Services.Impl
             }
         }
 
+        /// <summary>
+        /// Tạo đơn hàng cho khách hàng online (có thể không cần đăng nhập)
+        /// </summary>
+        public async Task<DonHangDto> CreateCustomerOrderAsync(CreateCustomerOrderDto dto, int? idKhachHang = null)
+        {
+            _logger.LogInformation("Creating customer order (online)");
+
+            // ================================================================
+            // BƯỚC 1: XỬ LÝ THÔNG TIN KHÁCH HÀNG
+            // ================================================================
+            KhachHang? khachHang = null;
+            bool isGuestCheckout = !idKhachHang.HasValue;
+
+            if (idKhachHang.HasValue)
+            {
+                // Khách hàng đã đăng nhập - lấy thông tin từ database
+                khachHang = await _unitOfWork.KhachHangRepository.GetByIdAsync(idKhachHang.Value);
+                if (khachHang == null || khachHang.TrangThai == false)
+                {
+                    throw new NotFoundException("Khách hàng không tồn tại.");
+                }
+                _logger.LogInformation($"👤 Khách hàng đã đăng nhập: {khachHang.TenKhachHang}");
+                _logger.LogInformation($"💎 Điểm hiện có: {khachHang.DiemTichLuy ?? 0} điểm");
+            }
+            else if (!string.IsNullOrEmpty(dto.Sdt))
+            {
+                // Guest checkout - tìm hoặc tạo khách hàng theo SDT
+                khachHang = await _unitOfWork.KhachHangRepository.GetBySdtAsync(dto.Sdt);
+                
+                if (khachHang == null)
+                {
+                    // Tạo khách hàng mới (guest)
+                    khachHang = new KhachHang
+                    {
+                        TenKhachHang = dto.TenKhachHang ?? "Khách hàng",
+                        Sdt = dto.Sdt,
+                        DiemTichLuy = 0,
+                        NgayDangKy = DateOnly.FromDateTime(DateTime.Now),
+                        TrangThai = true
+                    };
+                    await _unitOfWork.KhachHangRepository.CreateAsync(khachHang);
+                    await _unitOfWork.SaveChangesAsync();
+                    _logger.LogInformation($"👤 Tạo khách hàng mới (guest): {khachHang.TenKhachHang}");
+                }
+                else
+                {
+                    // Cập nhật thông tin nếu có thay đổi
+                    if (!string.IsNullOrEmpty(dto.TenKhachHang) && dto.TenKhachHang != khachHang.TenKhachHang)
+                    {
+                        khachHang.TenKhachHang = dto.TenKhachHang;
+                        await _unitOfWork.KhachHangRepository.UpdateAsync(khachHang);
+                        await _unitOfWork.SaveChangesAsync();
+                    }
+                    _logger.LogInformation($"👤 Khách hàng đã tồn tại: {khachHang.TenKhachHang}");
+                }
+            }
+            else
+            {
+                throw new BadRequestException("Vui lòng cung cấp số điện thoại để đặt hàng.");
+            }
+
+            // ================================================================
+            // BƯỚC 2: TỰ ĐỘNG CHỌN CHI NHÁNH BẤT KỲ CÓ HÀNG
+            // ================================================================
+            int selectedChiNhanhId = dto.IdchiNhanh;
+            
+            // Nếu chi nhánh được chỉ định, kiểm tra xem có tồn tại và hoạt động không
+            if (dto.IdchiNhanh > 0)
+            {
+                var chiNhanhCheck = await _unitOfWork.ChiNhanhRepository.GetByIdAsync(dto.IdchiNhanh);
+                if (chiNhanhCheck == null || chiNhanhCheck.TrangThai == false)
+                {
+                    _logger.LogWarning($"Chi nhánh {dto.IdchiNhanh} không tồn tại hoặc không hoạt động. Tự động chọn chi nhánh khác.");
+                    selectedChiNhanhId = 0; // Reset để tìm chi nhánh mới
+                }
+            }
+            
+            // Nếu chưa có chi nhánh, tự động tìm chi nhánh bất kỳ đang hoạt động
+            if (selectedChiNhanhId == 0)
+            {
+                selectedChiNhanhId = await FindAnyActiveBranchAsync();
+                if (selectedChiNhanhId == 0)
+                {
+                    throw new BadRequestException("Không tìm thấy chi nhánh nào đang hoạt động.");
+                }
+                _logger.LogInformation($"Đã tự động chọn chi nhánh {selectedChiNhanhId}.");
+            }
+            
+            var selectedChiNhanh = await _unitOfWork.ChiNhanhRepository.GetByIdAsync(selectedChiNhanhId);
+            if (selectedChiNhanh == null || selectedChiNhanh.TrangThai == false)
+            {
+                throw new NotFoundException("Chi nhánh không tồn tại hoặc không hoạt động.");
+            }
+            
+            // Cập nhật dto với chi nhánh đã chọn
+            dto.IdchiNhanh = selectedChiNhanhId;
+
+            var phuongThucTt = await _unitOfWork.PhuongThucThanhToanRepository.GetByIdAsync(dto.IdphuongThucTt);
+            if (phuongThucTt == null || phuongThucTt.TrangThai == false)
+            {
+                throw new NotFoundException("Phương thức thanh toán không hợp lệ.");
+            }
+
+            // Xác định trạng thái thanh toán
+            string trangThaiThanhToan = "PENDING_PAYMENT";
+            if (phuongThucTt.TenPhuongThuc?.ToUpper().Contains("TIỀN MẶT") == true ||
+                phuongThucTt.TenPhuongThuc?.ToUpper().Contains("CASH") == true)
+            {
+                trangThaiThanhToan = "PAID_ON_DELIVERY";
+            }
+
+            await _unitOfWork.BeginTransactionAsync();
+
+            try
+            {
+                // Tính tổng tiền
+                decimal tongTien = 0;
+                var chiTietList = new List<ChiTietDonHang>();
+
+                foreach (var item in dto.ChiTietDonHangs)
+                {
+                    var thuoc = await _unitOfWork.ThuocRepository.GetByIdAsync(item.Idthuoc);
+                    if (thuoc == null || thuoc.TrangThai == false)
+                    {
+                        throw new NotFoundException($"Thuốc ID {item.Idthuoc} không tồn tại.");
+                    }
+
+                    var thanhTienItem = item.SoLuong * item.DonGia;
+                    tongTien += thanhTienItem;
+
+                    chiTietList.Add(new ChiTietDonHang
+                    {
+                        Idthuoc = item.Idthuoc,
+                        SoLuong = item.SoLuong,
+                        DonGia = item.DonGia,
+                        ThanhTien = thanhTienItem
+                    });
+                }
+
+                // Tính điểm và giảm giá (CHỈ KHI KHÁCH HÀNG ĐÃ ĐĂNG NHẬP)
+                decimal tienGiamGia = 0;
+                int diemSuDung = 0;
+
+                if (!isGuestCheckout && khachHang != null)
+                {
+                    int diemKhaDungCuaKhachHang = khachHang.DiemTichLuy ?? 0;
+
+                    if (diemKhaDungCuaKhachHang >= SO_DIEM_TOI_THIEU_SU_DUNG)
+                    {
+                        decimal tienGiamGiaToiDa = tongTien * TY_LE_GIAM_GIA_TOI_DA;
+                        int diemToiDaCoTheSuDung = (int)(tienGiamGiaToiDa / TY_LE_QUYDO_DIEM_SANG_TIEN);
+                        diemSuDung = Math.Min(diemKhaDungCuaKhachHang, diemToiDaCoTheSuDung);
+                        tienGiamGia = diemSuDung * TY_LE_QUYDO_DIEM_SANG_TIEN;
+                    }
+                }
+
+                decimal thanhTien = tongTien - tienGiamGia;
+
+                // Tạo đơn hàng (KHÔNG CẦN idNguoiDung cho đơn hàng online)
+                var donHang = new DonHang
+                {
+                    IdnguoiDung = null, // Đơn hàng online không có nhân viên xử lý
+                    IdkhachHang = khachHang.Id,
+                    IdchiNhanh = dto.IdchiNhanh,
+                    IdphuongThucTt = dto.IdphuongThucTt,
+                    TongTien = tongTien,
+                    TienGiamGia = tienGiamGia,
+                    ThanhTien = thanhTien,
+                    NgayTao = DateOnly.FromDateTime(DateTime.Now),
+                    TrangThaiThanhToan = trangThaiThanhToan,
+                    LoaiDonHang = dto.LoaiDonHang ?? "TAI_CHO"
+                };
+
+                await _unitOfWork.DonHangRepository.CreateAsync(donHang);
+                await _unitOfWork.SaveChangesAsync();
+
+                _logger.LogInformation($"✅ Đã tạo đơn hàng online ID: {donHang.Id}");
+
+                // Xử lý chi tiết đơn hàng và trừ tồn kho (FEFO)
+                // Lấy từ chi nhánh đã chọn, nếu không đủ thì lấy từ chi nhánh khác
+                foreach (var chiTiet in chiTietList)
+                {
+                    chiTiet.IddonHang = donHang.Id;
+
+                    int soLuongCanTru = chiTiet.SoLuong ?? 0;
+                    var thuoc = await _unitOfWork.ThuocRepository.GetByIdAsync(chiTiet.Idthuoc ?? 0);
+
+                    // Lấy tất cả chi nhánh đang hoạt động để có thể lấy từ nhiều chi nhánh
+                    var pagedResult = await _unitOfWork.ChiNhanhRepository.GetPagedListAsync(1, 1000, true);
+                    var activeChiNhanhs = pagedResult.Items.OrderBy(cn => cn.Id).ToList();
+
+                    // Duyệt qua từng chi nhánh để lấy hàng
+                    foreach (var chiNhanh in activeChiNhanhs)
+                    {
+                        if (soLuongCanTru <= 0) break;
+
+                        var loHangs = await _unitOfWork.LoHangRepository.GetByThuocIdAsync(chiTiet.Idthuoc ?? 0);
+                        var loHangsTaiChiNhanh = loHangs
+                            .Where(lh => lh.KhoHangs.Any(kh =>
+                                kh.IdchiNhanh == chiNhanh.Id &&
+                                kh.SoLuongTon > 0))
+                            .OrderBy(lh => lh.NgayHetHan ?? DateOnly.MaxValue) // FEFO: sắp xếp theo ngày hết hạn
+                            .ToList();
+
+                        if (!loHangsTaiChiNhanh.Any())
+                            continue; // Chi nhánh này không có hàng, chuyển sang chi nhánh khác
+
+                        foreach (var loHang in loHangsTaiChiNhanh)
+                        {
+                            if (soLuongCanTru <= 0) break;
+
+                            var khoHang = await _unitOfWork.KhoHangRepository
+                                .GetByChiNhanhAndLoHangAsync(chiNhanh.Id, loHang.Id);
+
+                            if (khoHang == null || khoHang.SoLuongTon <= 0)
+                                continue;
+
+                            int soLuongTruLoNay = Math.Min(soLuongCanTru, khoHang.SoLuongTon ?? 0);
+
+                            await _unitOfWork.KhoHangRepository.TruTonKhoAsync(
+                                chiNhanh.Id,
+                                loHang.Id,
+                                soLuongTruLoNay);
+
+                            _logger.LogInformation($"Lấy {soLuongTruLoNay} {thuoc?.DonVi} từ chi nhánh {chiNhanh.Id} (Lô: {loHang.SoLo})");
+
+                            soLuongCanTru -= soLuongTruLoNay;
+                        }
+                    }
+
+                    // Nếu vẫn còn thiếu sau khi đã lấy từ tất cả chi nhánh
+                    if (soLuongCanTru > 0)
+                    {
+                        throw new BadRequestException($"Không đủ tồn kho cho thuốc '{thuoc?.TenThuoc}'. Còn thiếu: {soLuongCanTru} {thuoc?.DonVi}");
+                    }
+                }
+
+                await _unitOfWork.ChiTietDonHangRepository.CreateRangeAsync(chiTietList);
+                await _unitOfWork.SaveChangesAsync();
+
+                // ================================================================
+                // BƯỚC 3: TÍCH ĐIỂM (CHỈ KHI KHÁCH HÀNG ĐÃ ĐĂNG NHẬP)
+                // ================================================================
+                if (!isGuestCheckout && khachHang != null)
+                {
+                    // Tính điểm được cộng từ đơn hàng này
+                    int diemCong = (int)(thanhTien / TY_LE_TICH_DIEM);
+
+                    // Cập nhật điểm: Cộng điểm mới, Trừ điểm đã sử dụng
+                    await _khachHangService.UpdateDiemTichLuyAsync(
+                        khachHang.Id,
+                        diemCong,
+                        diemSuDung
+                    );
+
+                    // Lưu lịch sử điểm
+                    var lichSuDiem = new LichSuDiem
+                    {
+                        IdkhachHang = khachHang.Id,
+                        IddonHang = donHang.Id,
+                        DiemCong = diemCong,
+                        DiemTru = diemSuDung,
+                        NgayGiaoDich = DateOnly.FromDateTime(DateTime.Now)
+                    };
+
+                    await _unitOfWork.LichSuDiemRepository.CreateAsync(lichSuDiem);
+                    await _unitOfWork.SaveChangesAsync();
+
+                    _logger.LogInformation($"💎 Đã tích điểm: +{diemCong} điểm, -{diemSuDung} điểm");
+                }
+                else
+                {
+                    _logger.LogInformation("ℹ️ Guest checkout - Không tích điểm");
+                }
+
+                // ================================================================
+                // BƯỚC 4: TẠO ĐƠN GIAO HÀNG (NẾU CẦN)
+                // ================================================================
+                if (dto.LoaiDonHang == "GIAO_HANG" && !string.IsNullOrEmpty(dto.DiaChiGiaoHang))
+                {
+                    // Đơn giao hàng sẽ được tạo sau khi thanh toán thành công
+                    // (trong MomoPaymentService.CreateDonGiaoHangIfNotExistsAsync)
+                    _logger.LogInformation("📦 Đơn hàng giao hàng - Sẽ tạo đơn giao hàng sau khi thanh toán thành công");
+                }
+
+                await _unitOfWork.CommitTransactionAsync();
+
+                // Load lại với details để trả về
+                var result = await GetByIdAsync(donHang.Id);
+                return result!;
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "❌ LỖI KHI TẠO ĐƠN HÀNG ONLINE");
+                throw;
+            }
+        }
+
         // ================================================================
         // CÁC PHƯƠNG THỨC HỖ TRỢ KHÁC (GIỮ NGUYÊN)
         // ================================================================
@@ -320,6 +633,11 @@ namespace quanlybanthuoc.Services.Impl
                 TienGiamGia = donHang.TienGiamGia,
                 ThanhTien = donHang.ThanhTien,
                 NgayTao = donHang.NgayTao,
+                LoaiDonHang = donHang.LoaiDonHang,
+                TrangThaiThanhToan = donHang.TrangThaiThanhToan,
+                MomoOrderId = donHang.MomoOrderId,
+                MomoTransactionId = donHang.MomoTransactionId,
+                NgayThanhToan = donHang.NgayThanhToan,
                 TenNguoiDung = donHang.IdnguoiDungNavigation?.HoTen,
                 TenKhachHang = donHang.IdkhachHangNavigation?.TenKhachHang,
                 TenChiNhanh = donHang.IdchiNhanhNavigation?.TenChiNhanh,
@@ -367,6 +685,11 @@ namespace quanlybanthuoc.Services.Impl
                 TienGiamGia = dh.TienGiamGia,
                 ThanhTien = dh.ThanhTien,
                 NgayTao = dh.NgayTao,
+                LoaiDonHang = dh.LoaiDonHang,
+                TrangThaiThanhToan = dh.TrangThaiThanhToan,
+                MomoOrderId = dh.MomoOrderId,
+                MomoTransactionId = dh.MomoTransactionId,
+                NgayThanhToan = dh.NgayThanhToan,
                 TenNguoiDung = dh.IdnguoiDungNavigation?.HoTen,
                 TenKhachHang = dh.IdkhachHangNavigation?.TenKhachHang,
                 TenChiNhanh = dh.IdchiNhanhNavigation?.TenChiNhanh,
@@ -812,6 +1135,24 @@ namespace quanlybanthuoc.Services.Impl
                 _logger.LogError(ex, "Error updating order");
                 throw;
             }
+        }
+
+        /// <summary>
+        /// Tìm chi nhánh bất kỳ đang hoạt động
+        /// </summary>
+        private async Task<int> FindAnyActiveBranchAsync()
+        {
+            // Lấy tất cả chi nhánh đang hoạt động
+            var pagedResult = await _unitOfWork.ChiNhanhRepository.GetPagedListAsync(1, 1000, true);
+            var activeChiNhanhs = pagedResult.Items.OrderBy(cn => cn.Id).ToList();
+
+            // Trả về chi nhánh đầu tiên đang hoạt động
+            if (activeChiNhanhs.Any())
+            {
+                return activeChiNhanhs.First().Id;
+            }
+
+            return 0; // Không tìm thấy chi nhánh nào đang hoạt động
         }
     }
 }

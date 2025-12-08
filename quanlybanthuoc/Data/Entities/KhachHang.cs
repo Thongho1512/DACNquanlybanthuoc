@@ -11,6 +11,8 @@ public partial class KhachHang
 
     public string? Sdt { get; set; }
 
+    public string? MatKhau { get; set; }
+
     public int? DiemTichLuy { get; set; }
 
     public DateOnly? NgayDangKy { get; set; }

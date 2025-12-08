@@ -155,6 +155,12 @@ public partial class ShopDbContext : DbContext
             entity.Property(e => e.LoaiDonHang)
                 .HasMaxLength(20)
                 .HasDefaultValue("TAI_CHO");
+            entity.Property(e => e.TrangThaiThanhToan)
+                .HasMaxLength(50)
+                .HasDefaultValue("PENDING_PAYMENT");
+            entity.Property(e => e.MomoOrderId).HasMaxLength(100);
+            entity.Property(e => e.MomoTransactionId).HasMaxLength(100);
+            entity.Property(e => e.NgayThanhToan).HasColumnType("datetime");
             entity.Property(e => e.ThanhTien).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.TienGiamGia).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.TongTien).HasColumnType("decimal(18, 2)");
@@ -213,6 +219,7 @@ public partial class ShopDbContext : DbContext
                 .HasMaxLength(15)
                 .HasColumnName("SDT");
             entity.Property(e => e.TenKhachHang).HasMaxLength(100);
+            entity.Property(e => e.MatKhau).HasMaxLength(255);
         });
 
         modelBuilder.Entity<KhoHang>(entity =>
@@ -366,6 +373,7 @@ public partial class ShopDbContext : DbContext
             entity.Property(e => e.IddanhMuc).HasColumnName("IDDanhMuc");
             entity.Property(e => e.MoTa).HasMaxLength(200);
             entity.Property(e => e.TenThuoc).HasMaxLength(100);
+            entity.Property(e => e.HinhAnh).HasMaxLength(500);
 
             entity.HasOne(d => d.IddanhMucNavigation).WithMany(p => p.Thuocs)
                 .HasForeignKey(d => d.IddanhMuc)

@@ -14,8 +14,8 @@ using System.Security.Claims;
 namespace quanlybanthuoc.Controllers
 {
     /// <summary>
-    /// API cho trang khách hàng (Customer Pages)
-    /// Các endpoint này dành cho ng??i dùng cu?i ?? xem s?n ph?m, ??t hàng, theo dõi
+    /// API cho trang khï¿½ch hï¿½ng (Customer Pages)
+    /// Cï¿½c endpoint nï¿½y dï¿½nh cho ng??i dï¿½ng cu?i ?? xem s?n ph?m, ??t hï¿½ng, theo dï¿½i
     /// </summary>
     [Route("api/v1/customer")]
     [ApiController]
@@ -23,19 +23,22 @@ namespace quanlybanthuoc.Controllers
     {
         private readonly ILogger<CustomerPageController> _logger;
         private readonly ICustomerPageService _customerPageService;
+        private readonly IDonHangService _donHangService;
 
         public CustomerPageController(
             ILogger<CustomerPageController> logger,
-            ICustomerPageService customerPageService)
+            ICustomerPageService customerPageService,
+            IDonHangService donHangService)
         {
             _logger = logger;
             _customerPageService = customerPageService;
+            _donHangService = donHangService;
         }
 
-        #region ========== TRANG CH? & DANH SÁCH S?N PH?M ==========
+        #region ========== TRANG CH? & DANH Sï¿½CH S?N PH?M ==========
 
         /// <summary>
-        /// L?y danh sách s?n ph?m n?i b?t trên trang ch?
+        /// L?y danh sï¿½ch s?n ph?m n?i b?t trï¿½n trang ch?
         /// Endpoint: GET /api/v1/customer/medicines/featured
         /// </summary>
         [HttpGet("medicines/featured")]
@@ -51,7 +54,7 @@ namespace quanlybanthuoc.Controllers
         }
 
         /// <summary>
-        /// Tìm ki?m và l?c s?n ph?m nâng cao
+        /// Tï¿½m ki?m vï¿½ l?c s?n ph?m nï¿½ng cao
         /// Endpoint: GET /api/v1/customer/medicines/search
         /// </summary>
         [HttpGet("medicines/search")]
@@ -90,7 +93,7 @@ namespace quanlybanthuoc.Controllers
         #region ========== DANH M?C ==========
 
         /// <summary>
-        /// L?y danh sách t?t c? danh m?c
+        /// L?y danh sï¿½ch t?t c? danh m?c
         /// Endpoint: GET /api/v1/customer/categories
         /// </summary>
         [HttpGet("categories")]
@@ -105,10 +108,10 @@ namespace quanlybanthuoc.Controllers
 
         #endregion
 
-        #region ========== CHI NHÁNH & ??A ?i?M ==========
+        #region ========== CHI NHï¿½NH & ??A ?i?M ==========
 
         /// <summary>
-        /// L?y danh sách t?t c? chi nhánh ?ang ho?t ??ng
+        /// L?y danh sï¿½ch t?t c? chi nhï¿½nh ?ang ho?t ??ng
         /// Endpoint: GET /api/v1/customer/branches
         /// </summary>
         [HttpGet("branches")]
@@ -122,7 +125,7 @@ namespace quanlybanthuoc.Controllers
         }
 
         /// <summary>
-        /// Ki?m tra t?n kho t?i chi nhánh c? th?
+        /// Ki?m tra t?n kho t?i chi nhï¿½nh c? th?
         /// Endpoint: GET /api/v1/customer/branches/{branchId}/medicines/{medicineId}/stock
         /// </summary>
         [HttpGet("branches/{branchId}/medicines/{medicineId}/stock")]
@@ -137,12 +140,12 @@ namespace quanlybanthuoc.Controllers
 
         #endregion
 
-        #region ========== H? S? CÁ NHÂN (REQUIRE AUTH) ==========
+        #region ========== H? S? Cï¿½ NHï¿½N (REQUIRE AUTH) ==========
 
         /// <summary>
-        /// L?y thông tin cá nhân khách hàng
+        /// L?y thï¿½ng tin cï¿½ nhï¿½n khï¿½ch hï¿½ng
         /// Endpoint: GET /api/v1/customer/profile
-        /// Yêu c?u: ??ng nh?p
+        /// Yï¿½u c?u: ??ng nh?p
         /// </summary>
         [HttpGet("profile")]
         [Authorize]
@@ -152,7 +155,7 @@ namespace quanlybanthuoc.Controllers
 
             var customerId = GetCustomerId();
             if (!customerId.HasValue)
-                return Unauthorized(ApiResponse<string>.FailureResponse("Không tìm th?y thông tin khách hàng."));
+                return Unauthorized(ApiResponse<string>.FailureResponse("Khï¿½ng tï¿½m th?y thï¿½ng tin khï¿½ch hï¿½ng."));
 
             var result = ApiResponse<CustomerProfileDto>.SuccessResponse(
                 await _customerPageService.GetCustomerProfileAsync(customerId.Value));
@@ -160,9 +163,9 @@ namespace quanlybanthuoc.Controllers
         }
 
         /// <summary>
-        /// C?p nh?t thông tin cá nhân khách hàng
+        /// C?p nh?t thï¿½ng tin cï¿½ nhï¿½n khï¿½ch hï¿½ng
         /// Endpoint: PUT /api/v1/customer/profile
-        /// Yêu c?u: ??ng nh?p
+        /// Yï¿½u c?u: ??ng nh?p
         /// </summary>
         [HttpPut("profile")]
         [Authorize]
@@ -172,21 +175,21 @@ namespace quanlybanthuoc.Controllers
 
             var customerId = GetCustomerId();
             if (!customerId.HasValue)
-                return Unauthorized(ApiResponse<string>.FailureResponse("Không tìm th?y thông tin khách hàng."));
+                return Unauthorized(ApiResponse<string>.FailureResponse("Khï¿½ng tï¿½m th?y thï¿½ng tin khï¿½ch hï¿½ng."));
 
             await _customerPageService.UpdateCustomerProfileAsync(customerId.Value, dto);
-            var result = ApiResponse<string>.SuccessResponse("C?p nh?t thông tin thành công.");
+            var result = ApiResponse<string>.SuccessResponse("C?p nh?t thï¿½ng tin thï¿½nh cï¿½ng.");
             return Ok(result);
         }
 
         #endregion
 
-        #region ========== L?CH S? MUA HÀNG (REQUIRE AUTH) ==========
+        #region ========== L?CH S? MUA Hï¿½NG (REQUIRE AUTH) ==========
 
         /// <summary>
-        /// L?y l?ch s? mua hàng c?a khách hàng
+        /// L?y l?ch s? mua hï¿½ng c?a khï¿½ch hï¿½ng
         /// Endpoint: GET /api/v1/customer/orders
-        /// Yêu c?u: ??ng nh?p
+        /// Yï¿½u c?u: ??ng nh?p
         /// </summary>
         [HttpGet("orders")]
         [Authorize]
@@ -198,7 +201,7 @@ namespace quanlybanthuoc.Controllers
 
             var customerId = GetCustomerId();
             if (!customerId.HasValue)
-                return Unauthorized(ApiResponse<string>.FailureResponse("Không tìm th?y thông tin khách hàng."));
+                return Unauthorized(ApiResponse<string>.FailureResponse("Khï¿½ng tï¿½m th?y thï¿½ng tin khï¿½ch hï¿½ng."));
 
             var result = ApiResponse<PagedResult<DonHangDto>>.SuccessResponse(
                 await _customerPageService.GetOrderHistoryAsync(customerId.Value, pageNumber, pageSize));
@@ -206,9 +209,9 @@ namespace quanlybanthuoc.Controllers
         }
 
         /// <summary>
-        /// L?y chi ti?t ??n hàng
+        /// L?y chi ti?t ??n hï¿½ng
         /// Endpoint: GET /api/v1/customer/orders/{orderId}
-        /// Yêu c?u: ??ng nh?p
+        /// Yï¿½u c?u: ??ng nh?p
         /// </summary>
         [HttpGet("orders/{orderId}")]
         [Authorize]
@@ -218,7 +221,7 @@ namespace quanlybanthuoc.Controllers
 
             var customerId = GetCustomerId();
             if (!customerId.HasValue)
-                return Unauthorized(ApiResponse<string>.FailureResponse("Không tìm th?y thông tin khách hàng."));
+                return Unauthorized(ApiResponse<string>.FailureResponse("Khï¿½ng tï¿½m th?y thï¿½ng tin khï¿½ch hï¿½ng."));
 
             var result = ApiResponse<DonHangDto>.SuccessResponse(
                 await _customerPageService.GetOrderDetailAsync(orderId));
@@ -227,12 +230,12 @@ namespace quanlybanthuoc.Controllers
 
         #endregion
 
-        #region ========== THEO DÕI GIAO HÀNG (REQUIRE AUTH) ==========
+        #region ========== THEO Dï¿½I GIAO Hï¿½NG (REQUIRE AUTH) ==========
 
         /// <summary>
-        /// Theo dõi tr?ng thái giao hàng
+        /// Theo dï¿½i tr?ng thï¿½i giao hï¿½ng
         /// Endpoint: GET /api/v1/customer/orders/{orderId}/shipment
-        /// Yêu c?u: ??ng nh?p
+        /// Yï¿½u c?u: ??ng nh?p
         /// </summary>
         [HttpGet("orders/{orderId}/shipment")]
         [Authorize]
@@ -242,7 +245,7 @@ namespace quanlybanthuoc.Controllers
 
             var customerId = GetCustomerId();
             if (!customerId.HasValue)
-                return Unauthorized(ApiResponse<string>.FailureResponse("Không tìm th?y thông tin khách hàng."));
+                return Unauthorized(ApiResponse<string>.FailureResponse("Khï¿½ng tï¿½m th?y thï¿½ng tin khï¿½ch hï¿½ng."));
 
             var result = ApiResponse<ShipmentTrackingDto>.SuccessResponse(
                 await _customerPageService.TrackShipmentAsync(orderId));
@@ -251,12 +254,12 @@ namespace quanlybanthuoc.Controllers
 
         #endregion
 
-        #region ========== ?I?M TÍCH L?Y (REQUIRE AUTH) ==========
+        #region ========== ?I?M Tï¿½CH L?Y (REQUIRE AUTH) ==========
 
         /// <summary>
-        /// L?y l?ch s? ?i?m tích l?y
+        /// L?y l?ch s? ?i?m tï¿½ch l?y
         /// Endpoint: GET /api/v1/customer/loyalty-points
-        /// Yêu c?u: ??ng nh?p
+        /// Yï¿½u c?u: ??ng nh?p
         /// </summary>
         [HttpGet("loyalty-points")]
         [Authorize]
@@ -268,7 +271,7 @@ namespace quanlybanthuoc.Controllers
 
             var customerId = GetCustomerId();
             if (!customerId.HasValue)
-                return Unauthorized(ApiResponse<string>.FailureResponse("Không tìm th?y thông tin khách hàng."));
+                return Unauthorized(ApiResponse<string>.FailureResponse("Khï¿½ng tï¿½m th?y thï¿½ng tin khï¿½ch hï¿½ng."));
 
             var result = ApiResponse<PagedResult<LichSuDiemCustomerDto>>.SuccessResponse(
                 await _customerPageService.GetLoyaltyPointHistoryAsync(customerId.Value, pageNumber, pageSize));
@@ -277,10 +280,81 @@ namespace quanlybanthuoc.Controllers
 
         #endregion
 
+        #region ========== TRA Cá»¨U ÄÆ N HÃ€NG Báº°NG Sá» ÄIá»†N THOáº I (NO AUTH) ==========
+
+        /// <summary>
+        /// Tra cá»©u Ä‘Æ¡n hÃ ng báº±ng sá»‘ Ä‘iá»‡n thoáº¡i - KhÃ´ng cáº§n Ä‘Äƒng nháº­p
+        /// Endpoint: GET /api/v1/customer/orders/by-phone?phone={sdt}
+        /// </summary>
+        [HttpGet("orders/by-phone")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetOrdersByPhone([FromQuery] string phone)
+        {
+            _logger.LogInformation($"Looking up orders by phone: {phone}");
+
+            if (string.IsNullOrWhiteSpace(phone))
+            {
+                return BadRequest(ApiResponse<string>.FailureResponse("Vui lÃ²ng nháº­p sá»‘ Ä‘iá»‡n thoáº¡i."));
+            }
+
+            try
+            {
+                var result = ApiResponse<IEnumerable<DonHangDto>>.SuccessResponse(
+                    await _customerPageService.GetOrdersByPhoneAsync(phone));
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error looking up orders by phone: {phone}");
+                return BadRequest(ApiResponse<string>.FailureResponse(ex.Message));
+            }
+        }
+
+        #endregion
+
+        #region ========== Äáº¶T HÃ€NG ONLINE ==========
+
+        /// <summary>
+        /// Äáº·t hÃ ng online - Cho phÃ©p guest checkout (khÃ´ng cáº§n Ä‘Äƒng nháº­p)
+        /// Endpoint: POST /api/v1/customer/orders
+        /// </summary>
+        [HttpPost("orders")]
+        [AllowAnonymous] // Cho phÃ©p Ä‘áº·t hÃ ng khÃ´ng cáº§n Ä‘Äƒng nháº­p
+        public async Task<IActionResult> CreateOrder([FromBody] CreateCustomerOrderDto dto)
+        {
+            _logger.LogInformation("Creating customer order (online)");
+
+            // Láº¥y CustomerId tá»« token náº¿u cÃ³ (khÃ¡ch hÃ ng Ä‘Ã£ Ä‘Äƒng nháº­p)
+            int? customerId = null;
+            if (User.Identity?.IsAuthenticated == true)
+            {
+                var customerIdClaim = User.FindFirst("CustomerId");
+                if (customerIdClaim != null && int.TryParse(customerIdClaim.Value, out int id))
+                {
+                    customerId = id;
+                    _logger.LogInformation($"Customer authenticated: {customerId}");
+                }
+            }
+
+            try
+            {
+                var result = ApiResponse<DonHangDto>.SuccessResponse(
+                    await _donHangService.CreateCustomerOrderAsync(dto, customerId));
+                return CreatedAtAction(nameof(GetOrderDetail), new { orderId = result.Data?.Id }, result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating customer order");
+                return BadRequest(ApiResponse<DonHangDto>.FailureResponse(ex.Message));
+            }
+        }
+
+        #endregion
+
         #region ========== HELPER METHODS ==========
 
         /// <summary>
-        /// L?y ID khách hàng t? token
+        /// L?y ID khï¿½ch hï¿½ng t? token
         /// </summary>
         private int? GetCustomerId()
         {

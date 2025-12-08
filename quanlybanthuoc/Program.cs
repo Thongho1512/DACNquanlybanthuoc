@@ -60,6 +60,7 @@ builder.Services.AddScoped<ILoHangRepository, LoHangRepository>();
 builder.Services.AddScoped<IKhoHangRepository, KhoHangRepository>();
 builder.Services.AddScoped<IDonNhapHangRepository, DonNhapHangRepository>();
 builder.Services.AddScoped<IBaoCaoRepository, BaoCaoRepository>();
+builder.Services.AddScoped<IDonGiaoHangRepository, DonGiaoHangRepository>();
 
 // Services
 builder.Services.AddScoped<INguoiDungService, NguoiDungService>();
@@ -78,7 +79,12 @@ builder.Services.AddScoped<IDonNhapHangService, DonNhapHangService>();
 builder.Services.AddScoped<IVaiTroService, VaiTroService>();
 builder.Services.AddScoped<IBaoCaoService, BaoCaoService>();
 builder.Services.AddScoped<ICustomerPageService, CustomerPageService>();
+builder.Services.AddScoped<IDonGiaoHangService, DonGiaoHangService>();
+builder.Services.AddScoped<ICustomerAuthService, CustomerAuthService>();
 
+// Payment Service
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<IPaymentService, MomoPaymentService>();
 
 // ============================================
 // 3️⃣ Authentication & Authorization
