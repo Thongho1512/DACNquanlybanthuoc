@@ -91,7 +91,7 @@ namespace quanlybanthuoc.Services.Impl
             _logger.LogInformation($"Getting medicine detail: {id}");
             var thuoc = await _unitOfWork.ThuocRepository.GetByIdAsync(id);
             if (thuoc == null || thuoc.TrangThai == false)
-                throw new NotFoundException($"Không tìm th?y thu?c v?i id: {id}");
+                throw new NotFoundException($"Khï¿½ng tï¿½m th?y thu?c v?i id: {id}");
 
             var tonKhoByBranch = thuoc.LoHangs
                 .SelectMany(lh => lh.KhoHangs)
@@ -139,7 +139,7 @@ namespace quanlybanthuoc.Services.Impl
             _logger.LogInformation($"Getting customer profile: {customerId}");
             var khachHang = await _unitOfWork.KhachHangRepository.GetByIdAsync(customerId);
             if (khachHang == null)
-                throw new NotFoundException($"Không tìm th?y khách hàng v?i id: {customerId}");
+                throw new NotFoundException($"Khï¿½ng tï¿½m th?y khï¿½ch hï¿½ng v?i id: {customerId}");
 
             var donHangs = await _unitOfWork.DonHangRepository.GetByKhachHangIdAsync(customerId);
             var tongGiaTriMua = donHangs.Sum(d => d.ThanhTien ?? 0);
@@ -167,7 +167,7 @@ namespace quanlybanthuoc.Services.Impl
             _logger.LogInformation($"Updating customer profile: {customerId}");
             var khachHang = await _unitOfWork.KhachHangRepository.GetByIdAsync(customerId);
             if (khachHang == null)
-                throw new NotFoundException($"Không tìm th?y khách hàng v?i id: {customerId}");
+                throw new NotFoundException($"Khï¿½ng tï¿½m th?y khï¿½ch hï¿½ng v?i id: {customerId}");
 
             khachHang.TenKhachHang = dto.TenKhachHang ?? khachHang.TenKhachHang;
             khachHang.Sdt = dto.Sdt ?? khachHang.Sdt;
@@ -180,7 +180,7 @@ namespace quanlybanthuoc.Services.Impl
             _logger.LogInformation($"Getting order history for customer: {customerId}");
             var khachHang = await _unitOfWork.KhachHangRepository.GetByIdAsync(customerId);
             if (khachHang == null)
-                throw new NotFoundException($"Không tìm th?y khách hàng v?i id: {customerId}");
+                throw new NotFoundException($"Khï¿½ng tï¿½m th?y khï¿½ch hï¿½ng v?i id: {customerId}");
 
             var pagedList = await _unitOfWork.DonHangRepository.GetPagedListAsync(pageNumber, pageSize, idChiNhanh: null, idKhachHang: customerId, tuNgay: null, denNgay: null);
 
@@ -213,7 +213,7 @@ namespace quanlybanthuoc.Services.Impl
             _logger.LogInformation($"Getting order detail: {orderId}");
             var donHang = await _unitOfWork.DonHangRepository.GetByIdWithDetailsAsync(orderId);
             if (donHang == null)
-                throw new NotFoundException($"Không tìm th?y ??n hàng v?i id: {orderId}");
+                throw new NotFoundException($"Khï¿½ng tï¿½m th?y ??n hï¿½ng v?i id: {orderId}");
 
             return new DonHangDto
             {
@@ -247,23 +247,23 @@ namespace quanlybanthuoc.Services.Impl
             _logger.LogInformation($"Tracking shipment for order: {orderId}");
             var donHang = await _unitOfWork.DonHangRepository.GetByIdAsync(orderId);
             if (donHang == null)
-                throw new NotFoundException($"Không tìm th?y ??n hàng v?i id: {orderId}");
+                throw new NotFoundException($"Khï¿½ng tï¿½m th?y ??n hï¿½ng v?i id: {orderId}");
 
             var donGiaoHang = donHang.DonGiaoHangs.FirstOrDefault();
             if (donGiaoHang == null)
-                throw new NotFoundException($"Không tìm th?y thông tin giao hàng cho ??n hàng: {orderId}");
+                throw new NotFoundException($"Khï¿½ng tï¿½m th?y thï¿½ng tin giao hï¿½ng cho ??n hï¿½ng: {orderId}");
 
             var lichSuCapNhat = new List<ShipmentHistoryDto>();
             if (donGiaoHang.NgayTao.HasValue)
-                lichSuCapNhat.Add(new ShipmentHistoryDto { TrangThai = "PENDING", ThoiGian = donGiaoHang.NgayTao, MoTa = "??n hàng v?a ???c t?o" });
+                lichSuCapNhat.Add(new ShipmentHistoryDto { TrangThai = "PENDING", ThoiGian = donGiaoHang.NgayTao, MoTa = "??n hï¿½ng v?a ???c t?o" });
             if (donGiaoHang.NgayXacNhan.HasValue)
-                lichSuCapNhat.Add(new ShipmentHistoryDto { TrangThai = "CONFIRMED", ThoiGian = donGiaoHang.NgayXacNhan, MoTa = "??n hàng ?ã ???c xác nh?n" });
+                lichSuCapNhat.Add(new ShipmentHistoryDto { TrangThai = "CONFIRMED", ThoiGian = donGiaoHang.NgayXacNhan, MoTa = "??n hï¿½ng ?ï¿½ ???c xï¿½c nh?n" });
             if (donGiaoHang.NgayLayHang.HasValue)
-                lichSuCapNhat.Add(new ShipmentHistoryDto { TrangThai = "PICKING", ThoiGian = donGiaoHang.NgayLayHang, MoTa = "?ang chu?n b? hàng" });
+                lichSuCapNhat.Add(new ShipmentHistoryDto { TrangThai = "PICKING", ThoiGian = donGiaoHang.NgayLayHang, MoTa = "?ang chu?n b? hï¿½ng" });
             if (donGiaoHang.NgayBatDauGiao.HasValue)
-                lichSuCapNhat.Add(new ShipmentHistoryDto { TrangThai = "SHIPPING", ThoiGian = donGiaoHang.NgayBatDauGiao, MoTa = "?ang giao hàng" });
+                lichSuCapNhat.Add(new ShipmentHistoryDto { TrangThai = "SHIPPING", ThoiGian = donGiaoHang.NgayBatDauGiao, MoTa = "?ang giao hï¿½ng" });
             if (donGiaoHang.NgayGiaoThanhCong.HasValue)
-                lichSuCapNhat.Add(new ShipmentHistoryDto { TrangThai = "DELIVERED", ThoiGian = donGiaoHang.NgayGiaoThanhCong, MoTa = "Giao hàng thành công" });
+                lichSuCapNhat.Add(new ShipmentHistoryDto { TrangThai = "DELIVERED", ThoiGian = donGiaoHang.NgayGiaoThanhCong, MoTa = "Giao hï¿½ng thï¿½nh cï¿½ng" });
 
             return new ShipmentTrackingDto
             {
@@ -284,7 +284,7 @@ namespace quanlybanthuoc.Services.Impl
             _logger.LogInformation($"Getting loyalty point history for customer: {customerId}");
             var khachHang = await _unitOfWork.KhachHangRepository.GetByIdAsync(customerId);
             if (khachHang == null)
-                throw new NotFoundException($"Không tìm th?y khách hàng v?i id: {customerId}");
+                throw new NotFoundException($"Khï¿½ng tï¿½m th?y khï¿½ch hï¿½ng v?i id: {customerId}");
 
             var lichSuDiems = khachHang.LichSuDiems.OrderByDescending(l => l.NgayGiaoDich).ToList();
             var totalCount = lichSuDiems.Count();
@@ -343,12 +343,58 @@ namespace quanlybanthuoc.Services.Impl
             _logger.LogInformation($"Getting stock for medicine {medicineId} at branch {branchId}");
             var thuoc = await _unitOfWork.ThuocRepository.GetByIdAsync(medicineId);
             if (thuoc == null)
-                throw new NotFoundException($"Không tìm th?y thu?c v?i id: {medicineId}");
+                throw new NotFoundException($"Khï¿½ng tï¿½m th?y thu?c v?i id: {medicineId}");
 
             return thuoc.LoHangs
                 .SelectMany(lh => lh.KhoHangs)
                 .Where(kh => kh.IdchiNhanh == branchId)
                 .Sum(kh => kh.SoLuongTon);
+        }
+
+        public async Task<IEnumerable<DonHangDto>> GetOrdersByPhoneAsync(string phone)
+        {
+            _logger.LogInformation($"Looking up orders by phone: {phone}");
+
+            // TÃ¬m khÃ¡ch hÃ ng theo sá»‘ Ä‘iá»‡n thoáº¡i
+            var khachHang = await _unitOfWork.KhachHangRepository.GetBySdtAsync(phone);
+            if (khachHang == null)
+            {
+                throw new NotFoundException($"KhÃ´ng tÃ¬m tháº¥y khÃ¡ch hÃ ng vá»›i sá»‘ Ä‘iá»‡n thoáº¡i: {phone}");
+            }
+
+            // Láº¥y danh sÃ¡ch Ä‘Æ¡n hÃ ng cá»§a khÃ¡ch hÃ ng
+            var donHangs = await _unitOfWork.DonHangRepository.GetByKhachHangIdAsync(khachHang.Id);
+
+            return donHangs.Select(dh => new DonHangDto
+            {
+                Id = dh.Id,
+                IdnguoiDung = dh.IdnguoiDung,
+                IdkhachHang = dh.IdkhachHang,
+                IdchiNhanh = dh.IdchiNhanh,
+                IdphuongThucTt = dh.IdphuongThucTt,
+                TongTien = dh.TongTien,
+                TienGiamGia = dh.TienGiamGia,
+                ThanhTien = dh.ThanhTien,
+                NgayTao = dh.NgayTao,
+                LoaiDonHang = dh.LoaiDonHang,
+                TrangThaiThanhToan = dh.TrangThaiThanhToan,
+                MomoOrderId = dh.MomoOrderId,
+                MomoTransactionId = dh.MomoTransactionId,
+                NgayThanhToan = dh.NgayThanhToan,
+                TenNguoiDung = dh.IdnguoiDungNavigation?.HoTen,
+                TenKhachHang = dh.IdkhachHangNavigation?.TenKhachHang,
+                TenChiNhanh = dh.IdchiNhanhNavigation?.TenChiNhanh,
+                TenPhuongThucTt = dh.IdphuongThucTtNavigation?.TenPhuongThuc,
+                ChiTietDonHangs = dh.ChiTietDonHangs.Select(ct => new ChiTietDonHangDto
+                {
+                    Id = ct.Id,
+                    Idthuoc = ct.Idthuoc,
+                    TenThuoc = ct.IdthuocNavigation?.TenThuoc,
+                    SoLuong = ct.SoLuong,
+                    DonGia = ct.DonGia,
+                    ThanhTien = ct.ThanhTien
+                }).ToList()
+            }).OrderByDescending(dh => dh.NgayTao).ToList();
         }
     }
 }

@@ -13,6 +13,8 @@ using quanlybanthuoc.Dtos.NhaCungCap;
 using quanlybanthuoc.Dtos.PhuongThucThanhToan;
 using quanlybanthuoc.Dtos.Thuoc;
 using quanlybanthuoc.Dtos.VaiTro;
+using quanlybanthuoc.Dtos.DonGiaoHang;
+using quanlybanthuoc.Dtos.Auth;
 
 namespace quanlybanthuoc.Mappings
 {
@@ -56,6 +58,14 @@ namespace quanlybanthuoc.Mappings
             CreateMap<KhachHang, KhachHangDto>();
             CreateMap<CreateKhachHangDto, KhachHang>();
             CreateMap<UpdateKhachHangDto, KhachHang>();
+            CreateMap<CustomerRegisterRequest, KhachHang>()
+                .ForMember(dest => dest.DiemTichLuy, opt => opt.MapFrom(src => 0))
+                .ForMember(dest => dest.NgayDangKy, opt => opt.MapFrom(src => DateOnly.FromDateTime(DateTime.Now)))
+                .ForMember(dest => dest.TrangThai, opt => opt.MapFrom(src => true));
+            CreateMap<CustomerRegisterRequest, KhachHang>()
+                .ForMember(dest => dest.DiemTichLuy, opt => opt.MapFrom(src => 0))
+                .ForMember(dest => dest.NgayDangKy, opt => opt.MapFrom(src => DateOnly.FromDateTime(DateTime.Now)))
+                .ForMember(dest => dest.TrangThai, opt => opt.MapFrom(src => true));
 
             // DonHang mappings
             CreateMap<DonHang, DonHangDto>()
@@ -109,6 +119,16 @@ namespace quanlybanthuoc.Mappings
                 .ForMember(dest => dest.TenNguoiNhan,
                     opt => opt.MapFrom(src => src.IdnguoiNhanNavigation != null ? src.IdnguoiNhanNavigation.HoTen : null));
             CreateMap<CreateDonNhapHangDto, DonNhapHang>();
+
+            // DonGiaoHang mappings
+            CreateMap<DonGiaoHang, DonGiaoHangDto>()
+                .ForMember(dest => dest.TenNguoiGiaoHang,
+                    opt => opt.MapFrom(src => src.IdnguoiGiaoHangNavigation != null ? src.IdnguoiGiaoHangNavigation.HoTen : null))
+                .ForMember(dest => dest.SdtNguoiGiaoHang,
+                    opt => opt.MapFrom(src => src.IdnguoiGiaoHangNavigation != null ? src.IdnguoiGiaoHangNavigation.Sdt : null));
+            CreateMap<CreateDonGiaoHangDto, DonGiaoHang>();
+            CreateMap<UpdateDonGiaoHangDto, DonGiaoHang>()
+                .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
         }
     }
 }

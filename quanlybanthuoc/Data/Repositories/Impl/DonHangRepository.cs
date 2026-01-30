@@ -120,5 +120,12 @@ namespace quanlybanthuoc.Data.Repositories.Impl
                 $"DELETE FROM DonHang WHERE ID = {entity.Id}");
 
         }
+
+        public async Task<DonHang?> GetByMomoOrderIdAsync(string momoOrderId)
+        {
+            return await _dbSet
+                .Include(dh => dh.DonGiaoHangs)
+                .FirstOrDefaultAsync(dh => dh.MomoOrderId == momoOrderId);
+        }
     }
 }

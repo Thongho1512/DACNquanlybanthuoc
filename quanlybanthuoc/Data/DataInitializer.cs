@@ -11,7 +11,7 @@ namespace quanlybanthuoc.Data
             try
             {
                 // Đảm bảo DB được tạo
-                await context.Database.MigrateAsync();
+                //await context.Database.MigrateAsync();
                 Console.WriteLine("✓ Database ensured created");
 
                 // ===================================================

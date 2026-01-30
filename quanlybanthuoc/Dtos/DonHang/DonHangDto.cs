@@ -11,6 +11,11 @@
         public decimal? TienGiamGia { get; set; }
         public decimal? ThanhTien { get; set; }
         public DateOnly? NgayTao { get; set; }
+        public string? LoaiDonHang { get; set; }
+        public string? TrangThaiThanhToan { get; set; }
+        public string? MomoOrderId { get; set; }
+        public string? MomoTransactionId { get; set; }
+        public DateTime? NgayThanhToan { get; set; }
 
         // Navigation properties for display
         public string? TenNguoiDung { get; set; }

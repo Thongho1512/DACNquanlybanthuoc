@@ -19,6 +19,8 @@ public partial class Thuoc
 
     public string? MoTa { get; set; }
 
+    public string? HinhAnh { get; set; }
+
     public bool? TrangThai { get; set; }
 
     public virtual ICollection<ChiTietDonHang> ChiTietDonHangs { get; set; } = new List<ChiTietDonHang>();

@@ -10,19 +10,19 @@ using quanlybanthuoc.Dtos.ChiNhanh;
 namespace quanlybanthuoc.Services
 {
     /// <summary>
-    /// Service cho các API c?a trang khách hàng (Customer Pages)
+    /// Service cho cï¿½c API c?a trang khï¿½ch hï¿½ng (Customer Pages)
     /// </summary>
     public interface ICustomerPageService
     {
         /// <summary>
-        /// L?y danh sách thu?c n?i b?t trên trang ch?
+        /// L?y danh sï¿½ch thu?c n?i b?t trï¿½n trang ch?
         /// </summary>
         Task<PagedResult<ThuocCustomerDto>> GetFeaturedMedicinesAsync(
             int pageNumber = 1,
             int pageSize = 12);
 
         /// <summary>
-        /// Tìm ki?m và l?c thu?c nâng cao
+        /// Tï¿½m ki?m vï¿½ l?c thu?c nï¿½ng cao
         /// </summary>
         Task<PagedResult<ThuocCustomerDto>> SearchMedicinesAsync(
             string? searchTerm = null,
@@ -38,22 +38,22 @@ namespace quanlybanthuoc.Services
         Task<ThuocDetailDto?> GetMedicineDetailAsync(int id);
 
         /// <summary>
-        /// L?y danh sách t?t c? danh m?c
+        /// L?y danh sï¿½ch t?t c? danh m?c
         /// </summary>
         Task<IEnumerable<DanhMucDto>> GetCategoriesAsync();
 
         /// <summary>
-        /// L?y thông tin cá nhân khách hàng
+        /// L?y thï¿½ng tin cï¿½ nhï¿½n khï¿½ch hï¿½ng
         /// </summary>
         Task<CustomerProfileDto?> GetCustomerProfileAsync(int customerId);
 
         /// <summary>
-        /// C?p nh?t thông tin cá nhân khách hàng
+        /// C?p nh?t thï¿½ng tin cï¿½ nhï¿½n khï¿½ch hï¿½ng
         /// </summary>
         Task UpdateCustomerProfileAsync(int customerId, UpdateKhachHangDto dto);
 
         /// <summary>
-        /// L?y l?ch s? mua hàng c?a khách hàng
+        /// L?y l?ch s? mua hï¿½ng c?a khï¿½ch hï¿½ng
         /// </summary>
         Task<PagedResult<DonHangDto>> GetOrderHistoryAsync(
             int customerId,
@@ -61,17 +61,17 @@ namespace quanlybanthuoc.Services
             int pageSize = 10);
 
         /// <summary>
-        /// L?y chi ti?t ??n hàng
+        /// L?y chi ti?t ??n hï¿½ng
         /// </summary>
         Task<DonHangDto?> GetOrderDetailAsync(int orderId);
 
         /// <summary>
-        /// Theo dõi tr?ng thái giao hàng
+        /// Theo dï¿½i tr?ng thï¿½i giao hï¿½ng
         /// </summary>
         Task<ShipmentTrackingDto?> TrackShipmentAsync(int orderId);
 
         /// <summary>
-        /// L?y l?ch s? ?i?m tích l?y
+        /// L?y l?ch s? ?i?m tï¿½ch l?y
         /// </summary>
         Task<PagedResult<LichSuDiemCustomerDto>> GetLoyaltyPointHistoryAsync(
             int customerId,
@@ -79,13 +79,18 @@ namespace quanlybanthuoc.Services
             int pageSize = 10);
 
         /// <summary>
-        /// L?y danh sách chi nhánh có s?n ph?m
+        /// L?y danh sï¿½ch chi nhï¿½nh cï¿½ s?n ph?m
         /// </summary>
         Task<IEnumerable<ChiNhanhCustomerDto>> GetBranchesAsync();
 
         /// <summary>
-        /// L?y t?n kho c?a s?n ph?m t?i chi nhánh
+        /// L?y t?n kho c?a s?n ph?m t?i chi nhï¿½nh
         /// </summary>
         Task<int?> GetStockByBranchAsync(int medicineId, int branchId);
+
+        /// <summary>
+        /// Tra cá»©u Ä‘Æ¡n hÃ ng báº±ng sá»‘ Ä‘iá»‡n thoáº¡i (khÃ´ng cáº§n Ä‘Äƒng nháº­p)
+        /// </summary>
+        Task<IEnumerable<DonHangDto>> GetOrdersByPhoneAsync(string phone);
     }
 }

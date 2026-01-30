@@ -25,6 +25,14 @@ public partial class DonHang
 
     public string? LoaiDonHang { get; set; }
 
+    public string? TrangThaiThanhToan { get; set; }
+
+    public string? MomoOrderId { get; set; }
+
+    public string? MomoTransactionId { get; set; }
+
+    public DateTime? NgayThanhToan { get; set; }
+
     public virtual ICollection<ChiTietDonHang> ChiTietDonHangs { get; set; } = new List<ChiTietDonHang>();
 
     public virtual ICollection<DonGiaoHang> DonGiaoHangs { get; set; } = new List<DonGiaoHang>();

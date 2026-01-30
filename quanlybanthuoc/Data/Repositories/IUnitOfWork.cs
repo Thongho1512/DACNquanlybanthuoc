@@ -21,6 +21,7 @@
         IKhoHangRepository KhoHangRepository { get; }
         IDonNhapHangRepository DonNhapHangRepository { get; }
         IBaoCaoRepository BaoCaoRepository { get; }
+        IDonGiaoHangRepository DonGiaoHangRepository { get; }
 
         Task<int> SaveChangesAsync();
         Task BeginTransactionAsync();
