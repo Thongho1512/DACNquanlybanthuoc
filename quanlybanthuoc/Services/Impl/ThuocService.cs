@@ -24,6 +24,12 @@ namespace quanlybanthuoc.Services.Impl
         {
             _logger.LogInformation("Creating new medicine");
 
+            // Validation: Giá bán phải lớn hơn 0
+            if (dto.GiaBan == null || dto.GiaBan <= 0)
+            {
+                throw new BadRequestException("Lỗi: giá bán không hợp lệ");
+            }
+
             var entity = _mapper.Map<Thuoc>(dto);
             entity.TrangThai = true;
 

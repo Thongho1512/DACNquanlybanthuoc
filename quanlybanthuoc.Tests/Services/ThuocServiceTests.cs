@@ -63,21 +63,9 @@ namespace quanlybanthuoc.Tests.Services
 
             SetupDanhMucExists(1);
 
-            // Act & Assert
-            try
-            {
-                SetupSuccessfulCreate(createDto);
-                var result = await _service.CreateAsync(createDto);
-
-                // Nếu service cho phép tạo với giá 0
-                result.Should().NotBeNull();
-                result.GiaBan.Should().Be(0);
-            }
-            catch (BadRequestException)
-            {
-                // Nếu service từ chối giá 0
-                Assert.True(true, "Service rejects GiaBan = 0");
-            }
+            await Assert.ThrowsAsync<BadRequestException>(
+        async () => await _service.CreateAsync(createDto)
+    );
         }
 
         /// <summary>
@@ -184,19 +172,9 @@ namespace quanlybanthuoc.Tests.Services
             SetupDanhMucExists(1);
 
             // Act & Assert
-            try
-            {
-                SetupSuccessfulCreate(createDto);
-                var result = await _service.CreateAsync(createDto);
-
-                // Nếu service cho phép
-                result.Should().NotBeNull();
-            }
-            catch (BadRequestException)
-            {
-                // Nếu service từ chối
-                Assert.True(true, "Service rejects negative GiaBan");
-            }
+            await Assert.ThrowsAsync<BadRequestException>(
+        async () => await _service.CreateAsync(createDto)
+    );
         }
 
         /// <summary>
@@ -549,17 +527,9 @@ namespace quanlybanthuoc.Tests.Services
             SetupDanhMucExists(1);
 
             // Act & Assert
-            try
-            {
-                SetupSuccessfulCreate(createDto);
-                var result = await _service.CreateAsync(createDto);
-
-                result.Should().NotBeNull();
-            }
-            catch (Exception)
-            {
-                Assert.True(true, "Service rejects null GiaBan");
-            }
+            await Assert.ThrowsAsync<BadRequestException>(
+        async () => await _service.CreateAsync(createDto)
+    );
         }
 
         /// <summary>
@@ -582,17 +552,9 @@ namespace quanlybanthuoc.Tests.Services
             SetupDanhMucExists(1);
 
             // Act & Assert
-            try
-            {
-                SetupSuccessfulCreate(createDto);
-                var result = await _service.CreateAsync(createDto);
-
-                result.Should().NotBeNull();
-            }
-            catch (BadRequestException)
-            {
-                Assert.True(true, "Service rejects negative GiaBan");
-            }
+            await Assert.ThrowsAsync<BadRequestException>(
+        async () => await _service.CreateAsync(createDto)
+    );
         }
 
         /// <summary>
@@ -615,17 +577,9 @@ namespace quanlybanthuoc.Tests.Services
             SetupDanhMucExists(1);
 
             // Act & Assert
-            try
-            {
-                SetupSuccessfulCreate(createDto);
-                var result = await _service.CreateAsync(createDto);
-
-                result.Should().NotBeNull();
-            }
-            catch (BadRequestException)
-            {
-                Assert.True(true, "Service rejects GiaBan = 0");
-            }
+            await Assert.ThrowsAsync<BadRequestException>(
+        async () => await _service.CreateAsync(createDto)
+    );
         }
 
         /// <summary>
@@ -954,17 +908,9 @@ namespace quanlybanthuoc.Tests.Services
             SetupDanhMucExists(1);
 
             // Act & Assert
-            try
-            {
-                SetupSuccessfulCreate(createDto);
-                var result = await _service.CreateAsync(createDto);
-
-                result.Should().NotBeNull();
-            }
-            catch (BadRequestException)
-            {
-                Assert.True(true, "Service rejects GiaBan = 0");
-            }
+            await Assert.ThrowsAsync<BadRequestException>(
+        async () => await _service.CreateAsync(createDto)
+    );
         }
 
         /// <summary>
