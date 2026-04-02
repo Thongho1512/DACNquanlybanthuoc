@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using quanlybanthuoc.Data.Entities;
 using quanlybanthuoc.Data.Repositories;
 using quanlybanthuoc.Dtos;
@@ -29,14 +29,14 @@ namespace quanlybanthuoc.Services.Impl
 
             // Validate chi nhánh
             var chiNhanh = await _unitOfWork.ChiNhanhRepository.GetByIdAsync(dto.IdchiNhanh);
-            if (chiNhanh == null || chiNhanh.TrangThai == false)
+            if (chiNhanh == null || chiNhanh.TrangThai != true)
             {
                 throw new NotFoundException("Chi nhánh không tồn tại hoặc không hoạt động.");
             }
 
             // Validate nhà cung cấp
             var nhaCungCap = await _unitOfWork.NhaCungCapRepository.GetByIdAsync(dto.IdnhaCungCap);
-            if (nhaCungCap == null || nhaCungCap.TrangThai == false)
+            if (nhaCungCap == null || nhaCungCap.TrangThai != true)
             {
                 throw new NotFoundException("Nhà cung cấp không tồn tại.");
             }
@@ -73,7 +73,7 @@ namespace quanlybanthuoc.Services.Impl
                 {
                     // Validate thuốc
                     var thuoc = await _unitOfWork.ThuocRepository.GetByIdAsync(loHangDto.Idthuoc);
-                    if (thuoc == null || thuoc.TrangThai == false)
+                    if (thuoc == null || thuoc.TrangThai != true)
                     {
                         throw new NotFoundException($"Thuốc ID {loHangDto.Idthuoc} không tồn tại.");
                     }
@@ -247,7 +247,7 @@ namespace quanlybanthuoc.Services.Impl
 
             // Validate nhà cung cấp
             var nhaCungCap = await _unitOfWork.NhaCungCapRepository.GetByIdAsync(dto.IdnhaCungCap);
-            if (nhaCungCap == null || nhaCungCap.TrangThai == false)
+            if (nhaCungCap == null || nhaCungCap.TrangThai != true)
             {
                 throw new NotFoundException("Nhà cung cấp không tồn tại.");
             }
@@ -300,7 +300,7 @@ namespace quanlybanthuoc.Services.Impl
                 {
                     // Validate thuốc
                     var thuoc = await _unitOfWork.ThuocRepository.GetByIdAsync(loHangDto.Idthuoc);
-                    if (thuoc == null || thuoc.TrangThai == false)
+                    if (thuoc == null || thuoc.TrangThai != true)
                     {
                         throw new NotFoundException($"Thuốc ID {loHangDto.Idthuoc} không tồn tại.");
                     }

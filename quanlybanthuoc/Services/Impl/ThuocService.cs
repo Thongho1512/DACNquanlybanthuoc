@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using quanlybanthuoc.Data.Entities;
 using quanlybanthuoc.Data.Repositories;
 using quanlybanthuoc.Dtos;
@@ -147,7 +147,7 @@ namespace quanlybanthuoc.Services.Impl
 
             // Validate chi nhánh tồn tại
             var chiNhanh = await _unitOfWork.ChiNhanhRepository.GetByIdAsync(idChiNhanh);
-            if (chiNhanh == null || chiNhanh.TrangThai == false)
+            if (chiNhanh == null || chiNhanh.TrangThai != true)
             {
                 throw new NotFoundException($"Không tìm thấy chi nhánh với id: {idChiNhanh}");
             }

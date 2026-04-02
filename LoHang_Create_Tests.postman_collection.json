@@ -1,0 +1,427 @@
+{
+	"info": {
+		"_postman_id": "aa2643d8-303f-452c-85f2-c3285f5530c1",
+		"name": "LoHang_Create_API_Automation_Final",
+		"description": "Bộ script kiểm thử tự động API tạo mới lô hàng - ĐÃ CẬP NHẬT DỮ LIỆU KHỚP DB SEED.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "TC1: Chi nhánh không tồn tại (ID = 0)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code là 404\", function () {",
+							"    pm.response.to.have.status(404);",
+							"});",
+							"pm.test(\"Thông báo lỗi đúng\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.message).to.eql(\"Chi nhánh không tồn tại hoặc không hoạt động.\");",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"Idthuoc\": 1,\n    \"SoLo\": \"LO-TC1\",\n    \"NgaySanXuat\": \"2025-01-01\",\n    \"NgayHetHan\": \"2026-12-31\",\n    \"SoLuong\": 10,\n    \"GiaNhap\": 5000\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/lohangs?idChiNhanh=0",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"lohangs"
+					],
+					"query": [
+						{
+							"key": "idChiNhanh",
+							"value": "0"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "TC2: Chi nhánh ngừng hoạt động (ID = 2)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code là 404\", function () {",
+							"    pm.response.to.have.status(404);",
+							"});",
+							"pm.test(\"Thông báo lỗi đúng\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.message).to.eql(\"Chi nhánh không tồn tại hoặc không hoạt động.\");",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"Idthuoc\": 1,\n    \"SoLo\": \"LO-TC2\",\n    \"NgaySanXuat\": \"2025-01-01\",\n    \"NgayHetHan\": \"2026-12-31\",\n    \"SoLuong\": 10,\n    \"GiaNhap\": 5000\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/lohangs?idChiNhanh=7",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"lohangs"
+					],
+					"query": [
+						{
+							"key": "idChiNhanh",
+							"value": "7"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "TC3: Thuốc không tồn tại (ID = 999)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code là 404\", function () {",
+							"    pm.response.to.have.status(404);",
+							"});",
+							"pm.test(\"Thông báo lỗi đúng\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.message).to.eql(\"Thuốc không tồn tại.\");",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"Idthuoc\": 999,\n    \"SoLo\": \"LO-TC3\",\n    \"NgaySanXuat\": \"2025-01-01\",\n    \"NgayHetHan\": \"2026-12-31\",\n    \"SoLuong\": 10,\n    \"GiaNhap\": 5000\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/lohangs?idChiNhanh=6",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"lohangs"
+					],
+					"query": [
+						{
+							"key": "idChiNhanh",
+							"value": "6"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "TC4: Thuốc ngừng bán (ID = 2)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code là 404\", function () {",
+							"    pm.response.to.have.status(404);",
+							"});",
+							"pm.test(\"Thông báo lỗi đúng\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.message).to.eql(\"Thuốc không tồn tại.\");",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"Idthuoc\": 43,\n    \"SoLo\": \"LO-TC4\",\n    \"NgaySanXuat\": \"2025-01-01\",\n    \"NgayHetHan\": \"2026-12-31\",\n    \"SoLuong\": 10,\n    \"GiaNhap\": 5000\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/lohangs?idChiNhanh=6",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"lohangs"
+					],
+					"query": [
+						{
+							"key": "idChiNhanh",
+							"value": "6"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "TC5: Ngày hết hạn trước ngày sản xuất",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code là 400\", function () {",
+							"    pm.response.to.have.status(400);",
+							"});",
+							"pm.test(\"Thông báo lỗi đúng\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.message).to.eql(\"Ngày hết hạn phải sau ngày sản xuất.\");",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"Idthuoc\": 1,\n    \"SoLo\": \"LO-TC5\",\n    \"NgaySanXuat\": \"2025-06-01\",\n    \"NgayHetHan\": \"2025-01-01\",\n    \"SoLuong\": 10,\n    \"GiaNhap\": 5000\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/lohangs?idChiNhanh=1",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"lohangs"
+					],
+					"query": [
+						{
+							"key": "idChiNhanh",
+							"value": "1"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "TC6: Thuốc đã hết hạn",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code là 400\", function () {",
+							"    pm.response.to.have.status(400);",
+							"});",
+							"pm.test(\"Thông báo lỗi đúng\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.message).to.eql(\"Không thể nhập thuốc đã hết hạn.\");",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"Idthuoc\": 1,\n    \"SoLo\": \"LO-TC6\",\n    \"NgaySanXuat\": \"2022-01-01\",\n    \"NgayHetHan\": \"2023-01-01\",\n    \"SoLuong\": 10,\n    \"GiaNhap\": 5000\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/lohangs?idChiNhanh=1",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"lohangs"
+					],
+					"query": [
+						{
+							"key": "idChiNhanh",
+							"value": "1"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "TC7: Thành công - Tạo lô hàng mới (Thuốc 1, CN 1)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code là 201\", function () {",
+							"    pm.response.to.have.status(201);",
+							"});",
+							"pm.test(\"Trả về đúng dữ liệu lô hàng\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.data).to.have.property(\"id\");",
+							"    pm.expect(jsonData.data.soLo).to.eql(\"LO-TC7-SUCCESS\");",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"Idthuoc\": 42,\n    \"SoLo\": \"LO-TC7-SUCCESS\",\n    \"NgaySanXuat\": \"2025-01-01\",\n    \"NgayHetHan\": \"2026-12-31\",\n    \"SoLuong\": 50,\n    \"GiaNhap\": 1000\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/lohangs?idChiNhanh=6",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"lohangs"
+					],
+					"query": [
+						{
+							"key": "idChiNhanh",
+							"value": "6"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "TC8: Thành công - Cập nhật tồn kho (Thuốc 1, CN 1)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code là 201\", function () {",
+							"    pm.response.to.have.status(201);",
+							"});",
+							"pm.test(\"Xác nhận cập nhật thành công\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.data).to.have.property(\"id\");",
+							"    pm.expect(jsonData.data.soLo).to.eql(\"LO-TC8-UPDATE\");",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"Idthuoc\": 42,\n    \"SoLo\": \"LO-TC8-UPDATE\",\n    \"NgaySanXuat\": \"2025-01-01\",\n    \"NgayHetHan\": \"2026-12-31\",\n    \"SoLuong\": 30,\n    \"GiaNhap\": 1200\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/lohangs?idChiNhanh=6",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"lohangs"
+					],
+					"query": [
+						{
+							"key": "idChiNhanh",
+							"value": "6"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:5195",
+			"type": "string"
+		}
+	]
+}

@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using quanlybanthuoc.Data.Entities;
 using quanlybanthuoc.Data.Repositories;
@@ -162,14 +162,14 @@ namespace quanlybanthuoc.Services.Impl
 
             // Validate chi nhánh
             var chiNhanh = await _unitOfWork.ChiNhanhRepository.GetByIdAsync(idChiNhanh);
-            if (chiNhanh == null || chiNhanh.TrangThai == false)
+            if (chiNhanh == null || chiNhanh.TrangThai != true)
             {
                 throw new NotFoundException("Chi nhánh không tồn tại hoặc không hoạt động.");
             }
 
             // Validate thuốc
             var thuoc = await _unitOfWork.ThuocRepository.GetByIdAsync(dto.Idthuoc);
-            if (thuoc == null || thuoc.TrangThai == false)
+            if (thuoc == null || thuoc.TrangThai != true)
             {
                 throw new NotFoundException("Thuốc không tồn tại.");
             }

@@ -1,4 +1,4 @@
-﻿using quanlybanthuoc.Dtos;
+using quanlybanthuoc.Dtos;
 using System.Text.Json;
 
 namespace quanlybanthuoc.Middleware.Exceptions
@@ -42,7 +42,7 @@ namespace quanlybanthuoc.Middleware.Exceptions
                 UnauthorizedException unauthorizedEx =>
                     (StatusCodes.Status401Unauthorized, unauthorizedEx.Message),
 
-                _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred")
+                _ => (StatusCodes.Status500InternalServerError, exception.ToString())
 
             };
 

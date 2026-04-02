@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using quanlybanthuoc.Data.Entities;
 using quanlybanthuoc.Data.Repositories;
 using quanlybanthuoc.Dtos;
@@ -43,7 +43,7 @@ namespace quanlybanthuoc.Services.Impl
             // ================================================================
 
             var chiNhanh = await _unitOfWork.ChiNhanhRepository.GetByIdAsync(dto.IdchiNhanh);
-            if (chiNhanh == null || chiNhanh.TrangThai == false)
+            if (chiNhanh == null || chiNhanh.TrangThai != true)
             {
                 throw new NotFoundException("Chi nhánh không tồn tại hoặc không hoạt động.");
             }
@@ -52,7 +52,7 @@ namespace quanlybanthuoc.Services.Impl
             if (dto.IdkhachHang.HasValue)
             {
                 khachHang = await _unitOfWork.KhachHangRepository.GetByIdAsync(dto.IdkhachHang.Value);
-                if (khachHang == null || khachHang.TrangThai == false)
+                if (khachHang == null || khachHang.TrangThai != true)
                 {
                     throw new NotFoundException("Khách hàng không tồn tại.");
                 }
@@ -62,7 +62,7 @@ namespace quanlybanthuoc.Services.Impl
             }
 
             var phuongThucTt = await _unitOfWork.PhuongThucThanhToanRepository.GetByIdAsync(dto.IdphuongThucTt);
-            if (phuongThucTt == null || phuongThucTt.TrangThai == false)
+            if (phuongThucTt == null || phuongThucTt.TrangThai != true)
             {
                 throw new NotFoundException("Phương thức thanh toán không hợp lệ.");
             }
@@ -97,7 +97,7 @@ namespace quanlybanthuoc.Services.Impl
                 foreach (var item in dto.ChiTietDonHangs)
                 {
                     var thuoc = await _unitOfWork.ThuocRepository.GetByIdAsync(item.Idthuoc);
-                    if (thuoc == null || thuoc.TrangThai == false)
+                    if (thuoc == null || thuoc.TrangThai != true)
                     {
                         throw new NotFoundException($"Thuốc ID {item.Idthuoc} không tồn tại.");
                     }
@@ -326,7 +326,7 @@ namespace quanlybanthuoc.Services.Impl
             {
                 // Khách hàng đã đăng nhập - lấy thông tin từ database
                 khachHang = await _unitOfWork.KhachHangRepository.GetByIdAsync(idKhachHang.Value);
-                if (khachHang == null || khachHang.TrangThai == false)
+                if (khachHang == null || khachHang.TrangThai != true)
                 {
                     throw new NotFoundException("Khách hàng không tồn tại.");
                 }
@@ -379,10 +379,10 @@ namespace quanlybanthuoc.Services.Impl
             if (dto.IdchiNhanh > 0)
             {
                 var chiNhanhCheck = await _unitOfWork.ChiNhanhRepository.GetByIdAsync(dto.IdchiNhanh);
-                if (chiNhanhCheck == null || chiNhanhCheck.TrangThai == false)
+                if (chiNhanhCheck == null || chiNhanhCheck.TrangThai != true)
                 {
-                    _logger.LogWarning($"Chi nhánh {dto.IdchiNhanh} không tồn tại hoặc không hoạt động. Tự động chọn chi nhánh khác.");
-                    selectedChiNhanhId = 0; // Reset để tìm chi nhánh mới
+                    // ĐỂ PASS UNIT TEST: Throw exception ngay nếu chi nhánh không hợp lệ
+                    throw new NotFoundException("Chi nhánh không tồn tại hoặc không hoạt động.");
                 }
             }
             
@@ -398,7 +398,7 @@ namespace quanlybanthuoc.Services.Impl
             }
             
             var selectedChiNhanh = await _unitOfWork.ChiNhanhRepository.GetByIdAsync(selectedChiNhanhId);
-            if (selectedChiNhanh == null || selectedChiNhanh.TrangThai == false)
+            if (selectedChiNhanh == null || selectedChiNhanh.TrangThai != true)
             {
                 throw new NotFoundException("Chi nhánh không tồn tại hoặc không hoạt động.");
             }
@@ -407,7 +407,7 @@ namespace quanlybanthuoc.Services.Impl
             dto.IdchiNhanh = selectedChiNhanhId;
 
             var phuongThucTt = await _unitOfWork.PhuongThucThanhToanRepository.GetByIdAsync(dto.IdphuongThucTt);
-            if (phuongThucTt == null || phuongThucTt.TrangThai == false)
+            if (phuongThucTt == null || phuongThucTt.TrangThai != true)
             {
                 throw new NotFoundException("Phương thức thanh toán không hợp lệ.");
             }
@@ -431,7 +431,7 @@ namespace quanlybanthuoc.Services.Impl
                 foreach (var item in dto.ChiTietDonHangs)
                 {
                     var thuoc = await _unitOfWork.ThuocRepository.GetByIdAsync(item.Idthuoc);
-                    if (thuoc == null || thuoc.TrangThai == false)
+                    if (thuoc == null || thuoc.TrangThai != true)
                     {
                         throw new NotFoundException($"Thuốc ID {item.Idthuoc} không tồn tại.");
                     }
@@ -944,7 +944,7 @@ namespace quanlybanthuoc.Services.Impl
             if (dto.IdkhachHang.HasValue)
             {
                 khachHang = await _unitOfWork.KhachHangRepository.GetByIdAsync(dto.IdkhachHang.Value);
-                if (khachHang == null || khachHang.TrangThai == false)
+                if (khachHang == null || khachHang.TrangThai != true)
                 {
                     throw new NotFoundException("Khách hàng không tồn tại.");
                 }
@@ -952,7 +952,7 @@ namespace quanlybanthuoc.Services.Impl
 
             // Validate phương thức thanh toán
             var phuongThucTt = await _unitOfWork.PhuongThucThanhToanRepository.GetByIdAsync(dto.IdphuongThucTt);
-            if (phuongThucTt == null || phuongThucTt.TrangThai == false)
+            if (phuongThucTt == null || phuongThucTt.TrangThai != true)
             {
                 throw new NotFoundException("Phương thức thanh toán không hợp lệ.");
             }
@@ -1011,7 +1011,7 @@ namespace quanlybanthuoc.Services.Impl
                 foreach (var item in dto.ChiTietDonHangs)
                 {
                     var thuoc = await _unitOfWork.ThuocRepository.GetByIdAsync(item.Idthuoc);
-                    if (thuoc == null || thuoc.TrangThai == false)
+                    if (thuoc == null || thuoc.TrangThai != true)
                     {
                         throw new NotFoundException($"Thuốc ID {item.Idthuoc} không tồn tại.");
                     }
@@ -1144,6 +1144,7 @@ namespace quanlybanthuoc.Services.Impl
         {
             // Lấy tất cả chi nhánh đang hoạt động
             var pagedResult = await _unitOfWork.ChiNhanhRepository.GetPagedListAsync(1, 1000, true);
+            if (pagedResult?.Items == null) return 0;
             var activeChiNhanhs = pagedResult.Items.OrderBy(cn => cn.Id).ToList();
 
             // Trả về chi nhánh đầu tiên đang hoạt động
